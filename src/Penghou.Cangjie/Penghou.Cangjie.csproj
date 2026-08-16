@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageId>Penghou.Cangjie</PackageId>
+    <Title>Penghou Cangjie</Title>
+    <Authors>Penghou.Cangjie contributors</Authors>
+    <Description>Framework-agnostic context, provenance, relation, and retrieval abstractions for .NET AI applications.</Description>
+    <PackageTags>ai;context;memory;provenance;evidence;knowledge</PackageTags>
+    <RepositoryUrl>https://github.com/jenolaszlo-sketch/penghou-cangjie</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/jenolaszlo-sketch/penghou-cangjie</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="all" Condition="'$(CI)' == 'true'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
