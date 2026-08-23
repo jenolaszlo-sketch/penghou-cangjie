@@ -154,3 +154,10 @@ Public API Analyzer baselines protect all packable packages. The SQLite test
 suite covers store-specific behavior and runs the reusable
 `ContextStoreConformanceSuite` through a fresh peer store over the same durable
 database.
+
+The separate integration test project consumes Zhinu's published package as an
+application would. Its restart proof records research evidence from one logical
+provider, reconstructs it for an architecture provider, snapshots the exact
+selection, stores a derived decision, and publishes only Cangjie snapshot and
+decision references as a durable Zhinu artifact. Neither core package depends
+on the other.

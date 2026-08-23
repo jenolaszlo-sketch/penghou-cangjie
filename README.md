@@ -137,6 +137,9 @@ See the [project roadmap](ROADMAP.md) for immutable logical revisions,
 first-class provenance, scoped retrieval, pinned context snapshots, and the
 planned Solo/Zhinu integration proof.
 
+The `Penghou.Cangjie.Integration.Tests` project contains that restart-safe
+reference-flow proof without adding Solo or Zhinu dependencies to Cangjie core.
+
 Potential future extension packages include hybrid embedding retrieval and a
 snapshot-aware code graph extracted through Roslyn. These remain separate from
 the small lexical core, and Cangjie will not introduce an LLM dependency.

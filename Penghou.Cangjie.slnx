@@ -8,6 +8,7 @@
     <Project Path="src/Penghou.Cangjie/Penghou.Cangjie.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Penghou.Cangjie.Integration.Tests/Penghou.Cangjie.Integration.Tests.csproj" />
     <Project Path="tests/Penghou.Cangjie.Sqlite.Tests/Penghou.Cangjie.Sqlite.Tests.csproj" />
     <Project Path="tests/Penghou.Cangjie.Tests/Penghou.Cangjie.Tests.csproj" />
   </Folder>

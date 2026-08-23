@@ -356,6 +356,11 @@ Acceptance criteria:
 
 ## Phase C8 — Minimal Solo and Zhinu integration proof
 
+Status: initial black-box proof implemented against Zhinu's published durable
+artifact contract. Separate logical research and architecture providers write
+provenance, restart through fresh Cangjie and Zhinu instances, reconstruct an
+exact snapshot, and retain only snapshot/decision references in Zhinu.
+
 Do not make core Cangjie depend on Solo or Zhinu. Solo may initially consume
 both libraries directly. Create an integration package only if it contains a
 clear reusable contract rather than package symmetry.
