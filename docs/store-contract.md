@@ -77,8 +77,20 @@ logical keys, source URIs, and tag values are not recorded.
 ## Retention
 
 Ordinary physical deletion is permitted for standalone records. Keyed revision
-history is protected from ordinary deletion and expiration cleanup. Future
-snapshot pinning may strengthen retention further.
+history is protected from ordinary deletion and expiration cleanup. Snapshot
+references additionally pin otherwise standalone records.
+
+## Snapshots
+
+Snapshots are immutable ordered lists of exact physical item IDs plus a
+caller-defined query identity, retrieval strategy/version, selection time,
+purpose, and provider-neutral metadata. Creation is atomic: either the snapshot
+and every reference are committed, or none are. Missing references and reused
+snapshot IDs are conflicts.
+
+Snapshot references pin their items. Ordinary deletion and expiration cleanup
+must preserve them. Resolution returns physical items in recorded order and is
+restart-safe; later logical revisions cannot alter an existing snapshot.
 
 ## Conformance suite
 
@@ -106,6 +118,7 @@ data. `ContextStoreConformanceSuite.VerifyAsync` currently verifies:
 - exact scope/kind lexical retrieval isolation and ordered multi-scope
   precedence with logical-key deduplication.
 - retrieval strategy metadata.
+- immutable snapshot persistence and ordered restart reconstruction.
 
 The suite throws `InvalidOperationException` naming the failed check. It does
 not depend on a particular test framework, so implementations can call it from

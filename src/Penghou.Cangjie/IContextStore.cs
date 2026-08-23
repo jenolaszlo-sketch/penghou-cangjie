@@ -31,6 +31,18 @@ public interface IContextStore
         ContextQuery query,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Atomically stores an immutable snapshot and pins its items.</summary>
+    ValueTask<ContextSnapshot> StoreSnapshotAsync(ContextSnapshot snapshot,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Gets a snapshot by identity.</summary>
+    ValueTask<ContextSnapshot?> GetSnapshotAsync(Guid id,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Resolves a snapshot's exact items in recorded order.</summary>
+    ValueTask<ContextSnapshotResolution?> ResolveSnapshotAsync(Guid id,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Physically deletes a standalone item and every relation involving it.
     /// Keyed revisions are protected from ordinary deletion.

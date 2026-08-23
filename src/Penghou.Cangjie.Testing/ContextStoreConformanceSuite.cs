@@ -212,6 +212,26 @@ public static class ContextStoreConformanceSuite
             "search.ordered-scopes");
         checks.Add("scoped-retrieval");
 
+        var snapshot = await store.StoreSnapshotAsync(
+            new ContextSnapshot
+            {
+                ItemIds = [second.Id, first.Id],
+                QueryIdentity = "conformance:revision-history",
+                Strategy = ContextSearchStrategies.Exact,
+                StrategyVersion = "conformance-v1",
+                Purpose = "restart proof"
+            },
+            cancellationToken).ConfigureAwait(false);
+        var resolvedSnapshot = await peer.ResolveSnapshotAsync(
+            snapshot.Id,
+            cancellationToken).ConfigureAwait(false);
+        Require(
+            resolvedSnapshot is not null &&
+            resolvedSnapshot.Items.Select(item => item.Id)
+                .SequenceEqual(snapshot.ItemIds),
+            "snapshot.restart-ordered-resolution");
+        checks.Add("immutable-snapshots");
+
         return new ContextStoreConformanceReport
         {
             CompletedChecks = checks

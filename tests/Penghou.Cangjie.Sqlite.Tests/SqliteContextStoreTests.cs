@@ -74,7 +74,8 @@ public sealed class SqliteContextStoreTests : IDisposable
             "write-conflicts",
             "scoped-idempotency",
             "relation-persistence",
-            "scoped-retrieval");
+            "scoped-retrieval",
+            "immutable-snapshots");
     }
 
     [Fact]
@@ -541,6 +542,57 @@ public sealed class SqliteContextStoreTests : IDisposable
 
         await ambiguous.Should().ThrowAsync<ArgumentException>();
         await duplicate.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task Snapshots_RoundTripInOrderAndPinExactItems()
+    {
+        var store = CreateStore();
+        var first = await store.StoreAsync(Item("first") with
+        {
+            ExpiresAt = clock.GetUtcNow().AddMinutes(1)
+        });
+        var second = await store.StoreAsync(Item("second"));
+        var snapshot = await store.StoreSnapshotAsync(new ContextSnapshot
+        {
+            ItemIds = [second.Id, first.Id],
+            QueryIdentity = "query:sha256:test",
+            Strategy = ContextSearchStrategies.Exact,
+            StrategyVersion = "test-v1",
+            Purpose = "test reconstruction",
+            Metadata = new Dictionary<string, string> { ["consumer"] = "tests" }
+        });
+        var peer = CreateStore();
+
+        var resolution = await peer.ResolveSnapshotAsync(snapshot.Id);
+
+        resolution.Should().NotBeNull();
+        resolution!.Items.Select(item => item.Id).Should().Equal(second.Id, first.Id);
+        resolution.Snapshot.Should().BeEquivalentTo(snapshot);
+        await store.Invoking(value => value.DeleteAsync(first.Id).AsTask())
+            .Should().ThrowAsync<ContextStoreConflictException>();
+        clock.Advance(TimeSpan.FromMinutes(2));
+        (await store.DeleteExpiredAsync()).Should().Be(0);
+        (await peer.GetAsync(first.Id)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Snapshots_MissingReferenceRollsBackAtomically()
+    {
+        var store = CreateStore();
+        var existing = await store.StoreAsync(Item("existing"));
+        var snapshotId = Guid.NewGuid();
+        var operation = () => store.StoreSnapshotAsync(new ContextSnapshot
+        {
+            Id = snapshotId,
+            ItemIds = [existing.Id, Guid.NewGuid()],
+            QueryIdentity = "query:test",
+            Strategy = ContextSearchStrategies.Exact,
+            StrategyVersion = "test-v1"
+        }).AsTask();
+
+        await operation.Should().ThrowAsync<ContextStoreConflictException>();
+        (await store.GetSnapshotAsync(snapshotId)).Should().BeNull();
     }
 
     [Fact]

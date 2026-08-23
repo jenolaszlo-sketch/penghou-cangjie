@@ -353,6 +353,96 @@ public sealed class SqliteContextStore : IContextStore
         return results;
     }
 
+    /// <inheritdoc />
+    public async ValueTask<ContextSnapshot> StoreSnapshotAsync(
+        ContextSnapshot snapshot,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateSnapshot(snapshot);
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var transaction = connection.BeginTransaction(deferred: false);
+        var stored = snapshot with
+        {
+            Id = snapshot.Id == Guid.Empty ? Guid.NewGuid() : snapshot.Id,
+            SelectedAt = snapshot.SelectedAt == default
+                ? timeProvider.GetUtcNow()
+                : snapshot.SelectedAt.ToUniversalTime(),
+            ItemIds = snapshot.ItemIds.ToArray(),
+            Metadata = new Dictionary<string, string>(snapshot.Metadata, StringComparer.Ordinal)
+        };
+        try
+        {
+            await ExecuteAsync(connection, transaction, """
+                INSERT INTO context_snapshots
+                    (id, query_identity, strategy, strategy_version, selected_at, purpose, metadata_json)
+                VALUES
+                    ($id, $queryIdentity, $strategy, $strategyVersion, $selectedAt, $purpose, $metadata);
+                """,
+                [("$id", stored.Id.ToString("D")), ("$queryIdentity", stored.QueryIdentity),
+                 ("$strategy", stored.Strategy), ("$strategyVersion", stored.StrategyVersion),
+                 ("$selectedAt", FormatTimestamp(stored.SelectedAt)), ("$purpose", stored.Purpose),
+                 ("$metadata", JsonSerializer.Serialize(stored.Metadata))], cancellationToken)
+                .ConfigureAwait(false);
+            for (var index = 0; index < stored.ItemIds.Count; index++)
+            {
+                await ExecuteAsync(connection, transaction, """
+                    INSERT INTO context_snapshot_items(snapshot_id, item_id, ordinal)
+                    VALUES ($snapshotId, $itemId, $ordinal);
+                    """,
+                    [("$snapshotId", stored.Id.ToString("D")),
+                     ("$itemId", stored.ItemIds[index].ToString("D")), ("$ordinal", index)],
+                    cancellationToken).ConfigureAwait(false);
+            }
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            return stored;
+        }
+        catch (SqliteException exception) when (exception.SqliteErrorCode == 19)
+        {
+            throw new ContextStoreConflictException(
+                "Snapshot creation conflicted with an existing identity or missing context item.",
+                exception);
+        }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<ContextSnapshot?> GetSnapshotAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Snapshot ID must not be empty.", nameof(id));
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await ReadSnapshotAsync(connection, id, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<ContextSnapshotResolution?> ResolveSnapshotAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        if (id == Guid.Empty)
+            throw new ArgumentException("Snapshot ID must not be empty.", nameof(id));
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var snapshot = await ReadSnapshotAsync(connection, id, cancellationToken).ConfigureAwait(false);
+        if (snapshot is null)
+            return null;
+        await using var command = CreateCommand(connection, $"""
+            SELECT {SelectColumns}
+            FROM context_snapshot_items csi
+            JOIN context_items ci ON ci.id = csi.item_id
+            WHERE csi.snapshot_id = $id
+            ORDER BY csi.ordinal ASC;
+            """, [("$id", id.ToString("D"))]);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        var items = new List<ContextItem>();
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            items.Add(ReadItem(reader));
+        return new ContextSnapshotResolution { Snapshot = snapshot, Items = items };
+    }
+
     private static void SetSearchRequestDiagnostics(
         Activity? activity,
         ContextQuery query,
@@ -390,6 +480,12 @@ public sealed class SqliteContextStore : IContextStore
         {
             throw new ContextStoreConflictException(
                 $"Context item '{id:D}' belongs to an immutable revision history and cannot be deleted by ordinary cleanup.");
+        }
+        if (await IsSnapshotPinnedAsync(connection, transaction, id, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            throw new ContextStoreConflictException(
+                $"Context item '{id:D}' is pinned by an immutable snapshot and cannot be deleted.");
         }
         await ExecuteAsync(connection, transaction,
             "DELETE FROM context_items_fts WHERE item_id = $id;",
@@ -539,10 +635,21 @@ public sealed class SqliteContextStore : IContextStore
             WHERE item_id IN (
                 SELECT id FROM context_items
                 WHERE expires_at <= $now AND logical_key IS NULL
+                  AND NOT EXISTS (
+                      SELECT 1 FROM context_snapshot_items csi
+                      WHERE csi.item_id = context_items.id
+                  )
             );
             """, [("$now", now)], cancellationToken).ConfigureAwait(false);
         var deleted = await ExecuteAsync(connection, transaction,
-            "DELETE FROM context_items WHERE expires_at <= $now AND logical_key IS NULL;",
+            """
+            DELETE FROM context_items
+            WHERE expires_at <= $now AND logical_key IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM context_snapshot_items csi
+                  WHERE csi.item_id = context_items.id
+              );
+            """,
             [("$now", now)], cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return deleted;
@@ -570,10 +677,10 @@ public sealed class SqliteContextStore : IContextStore
                 await versionCommand.ExecuteScalarAsync(cancellationToken)
                     .ConfigureAwait(false),
                 CultureInfo.InvariantCulture);
-            if (version != 2)
+            if (version != 3)
             {
                 throw new InvalidOperationException(
-                    $"Cangjie database schema version {version} is not supported by this preview. Recreate the database with schema version 2.");
+                    $"Cangjie database schema version {version} is not supported by this preview. Recreate the database with schema version 3.");
             }
             await ExecuteAsync(connection, null, Schema, [], cancellationToken)
                 .ConfigureAwait(false);
@@ -629,6 +736,21 @@ public sealed class SqliteContextStore : IContextStore
         var value = await command.ExecuteScalarAsync(cancellationToken)
             .ConfigureAwait(false);
         return Convert.ToInt32(value ?? 0, CultureInfo.InvariantCulture) == 1;
+    }
+
+    private static async Task<bool> IsSnapshotPinnedAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            "SELECT 1 FROM context_snapshot_items WHERE item_id = $id LIMIT 1;";
+        command.Parameters.AddWithValue("$id", id.ToString("D"));
+        return await command.ExecuteScalarAsync(cancellationToken)
+            .ConfigureAwait(false) is not null;
     }
 
     private static async Task<(Guid Id, int Revision)?> ReadCurrentRevisionAsync(
@@ -792,6 +914,58 @@ public sealed class SqliteContextStore : IContextStore
         return values.FirstOrDefault();
     }
 
+    private static async Task<ContextSnapshot?> ReadSnapshotAsync(
+        SqliteConnection connection,
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        string queryIdentity;
+        string strategy;
+        string strategyVersion;
+        DateTimeOffset selectedAt;
+        string? purpose;
+        IReadOnlyDictionary<string, string> metadata;
+        await using (var command = CreateCommand(connection, """
+            SELECT query_identity, strategy, strategy_version, selected_at,
+                   purpose, metadata_json
+            FROM context_snapshots
+            WHERE id = $id;
+            """, [("$id", id.ToString("D"))]))
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken)
+            .ConfigureAwait(false))
+        {
+            if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+                return null;
+            queryIdentity = reader.GetString(0);
+            strategy = reader.GetString(1);
+            strategyVersion = reader.GetString(2);
+            selectedAt = ParseTimestamp(reader.GetString(3));
+            purpose = reader.IsDBNull(4) ? null : reader.GetString(4);
+            metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(
+                reader.GetString(5)) ?? [];
+        }
+        await using var itemCommand = CreateCommand(connection, """
+            SELECT item_id FROM context_snapshot_items
+            WHERE snapshot_id = $id ORDER BY ordinal ASC;
+            """, [("$id", id.ToString("D"))]);
+        await using var itemReader = await itemCommand.ExecuteReaderAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var itemIds = new List<Guid>();
+        while (await itemReader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            itemIds.Add(Guid.Parse(itemReader.GetString(0)));
+        return new ContextSnapshot
+        {
+            Id = id,
+            ItemIds = itemIds,
+            QueryIdentity = queryIdentity,
+            Strategy = strategy,
+            StrategyVersion = strategyVersion,
+            SelectedAt = selectedAt,
+            Purpose = purpose,
+            Metadata = metadata
+        };
+    }
+
     private static async Task<IReadOnlyList<ContextItem>> ReadManyAsync(
         SqliteConnection connection,
         string predicate,
@@ -953,6 +1127,28 @@ public sealed class SqliteContextStore : IContextStore
             throw new ArgumentException("Metadata keys and values must not be null.", nameof(item));
         if (item.Tags.Any(string.IsNullOrWhiteSpace))
             throw new ArgumentException("Tags must not be blank.", nameof(item));
+    }
+
+    private static void ValidateSnapshot(ContextSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(snapshot.ItemIds);
+        if (snapshot.ItemIds.Count == 0)
+            throw new ArgumentException("A snapshot must reference at least one item.", nameof(snapshot));
+        if (snapshot.ItemIds.Any(id => id == Guid.Empty) ||
+            snapshot.ItemIds.Distinct().Count() != snapshot.ItemIds.Count)
+        {
+            throw new ArgumentException("Snapshot item IDs must be non-empty and unique.", nameof(snapshot));
+        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(snapshot.QueryIdentity);
+        ArgumentException.ThrowIfNullOrWhiteSpace(snapshot.Strategy);
+        ArgumentException.ThrowIfNullOrWhiteSpace(snapshot.StrategyVersion);
+        ArgumentNullException.ThrowIfNull(snapshot.Metadata);
+        if (snapshot.Metadata.Any(pair =>
+            string.IsNullOrWhiteSpace(pair.Key) || pair.Value is null))
+        {
+            throw new ArgumentException("Snapshot metadata must contain non-blank keys and non-null values.", nameof(snapshot));
+        }
     }
 
     private static void ValidateQuery(ContextQuery query)
@@ -1126,7 +1322,7 @@ public sealed class SqliteContextStore : IContextStore
             version INTEGER NOT NULL
         );
         INSERT INTO cangjie_schema(version)
-        SELECT 2 WHERE NOT EXISTS (SELECT 1 FROM cangjie_schema);
+        SELECT 3 WHERE NOT EXISTS (SELECT 1 FROM cangjie_schema);
         """;
 
     private const string Schema = """
@@ -1192,6 +1388,30 @@ public sealed class SqliteContextStore : IContextStore
             ON context_relations(from_id, kind, to_id);
         CREATE INDEX IF NOT EXISTS ix_context_relations_to
             ON context_relations(to_id, kind, from_id);
+
+        CREATE TABLE IF NOT EXISTS context_snapshots
+        (
+            id TEXT PRIMARY KEY,
+            query_identity TEXT NOT NULL,
+            strategy TEXT NOT NULL,
+            strategy_version TEXT NOT NULL,
+            selected_at TEXT NOT NULL,
+            purpose TEXT NULL,
+            metadata_json TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS context_snapshot_items
+        (
+            snapshot_id TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            ordinal INTEGER NOT NULL,
+            PRIMARY KEY(snapshot_id, ordinal),
+            UNIQUE(snapshot_id, item_id),
+            FOREIGN KEY(snapshot_id) REFERENCES context_snapshots(id) ON DELETE RESTRICT,
+            FOREIGN KEY(item_id) REFERENCES context_items(id) ON DELETE RESTRICT
+        );
+        CREATE INDEX IF NOT EXISTS ix_context_snapshot_items_item
+            ON context_snapshot_items(item_id, snapshot_id);
 
         CREATE VIRTUAL TABLE IF NOT EXISTS context_items_fts
         USING fts5(item_id UNINDEXED, content, tokenize = 'unicode61');

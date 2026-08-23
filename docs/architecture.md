@@ -75,12 +75,14 @@ connections per operation. Initialization is lazy and guarded within each store
 instance. Foreign keys are enabled for every connection; WAL and busy timeout
 are configurable.
 
-Schema version 2 contains:
+Schema version 3 contains:
 
 - `context_items` for immutable records, revision identity, provenance,
   metadata, expiration, idempotency keys, and canonical request hashes;
 - `context_tags` for normalized exact tag filters;
 - `context_relations` for directed, extensible relationships;
+- `context_snapshots` and `context_snapshot_items` for immutable ordered
+  selections and reference pinning;
 - `context_items_fts` for FTS5 lexical search.
 
 Unique indexes enforce `(scope, logical_key, revision)` and scoped idempotency.
@@ -140,8 +142,11 @@ history and could permit revision reuse. Expiration hides all expired items from
 ordinary search, while cleanup physically removes only standalone expired
 records.
 
-Snapshot reference pinning and explicit administrative purge are later roadmap
-work. No current API silently weakens future snapshot reproducibility.
+Immutable snapshots store ordered physical item references and selection
+metadata without duplicating payloads. SQLite foreign keys and one immediate
+transaction make snapshot creation atomic. Snapshot references pin standalone
+and keyed revisions against ordinary deletion and expiration cleanup. Explicit
+administrative purge remains later roadmap work.
 
 ## Verification
 

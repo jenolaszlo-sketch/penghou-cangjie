@@ -112,6 +112,28 @@ Penghou.Cangjie.ContextSearchMode.AllTerms = 0 -> Penghou.Cangjie.ContextSearchM
 Penghou.Cangjie.ContextSearchMode.AnyTerm = 1 -> Penghou.Cangjie.ContextSearchMode
 Penghou.Cangjie.ContextSearchMode.Phrase = 2 -> Penghou.Cangjie.ContextSearchMode
 Penghou.Cangjie.ContextSearchStrategies
+Penghou.Cangjie.ContextSnapshot
+Penghou.Cangjie.ContextSnapshot.Id.get -> System.Guid
+Penghou.Cangjie.ContextSnapshot.Id.init -> void
+Penghou.Cangjie.ContextSnapshot.ItemIds.get -> System.Collections.Generic.IReadOnlyList<System.Guid>!
+Penghou.Cangjie.ContextSnapshot.ItemIds.init -> void
+Penghou.Cangjie.ContextSnapshot.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Penghou.Cangjie.ContextSnapshot.Metadata.init -> void
+Penghou.Cangjie.ContextSnapshot.Purpose.get -> string?
+Penghou.Cangjie.ContextSnapshot.Purpose.init -> void
+Penghou.Cangjie.ContextSnapshot.QueryIdentity.get -> string!
+Penghou.Cangjie.ContextSnapshot.QueryIdentity.init -> void
+Penghou.Cangjie.ContextSnapshot.SelectedAt.get -> System.DateTimeOffset
+Penghou.Cangjie.ContextSnapshot.SelectedAt.init -> void
+Penghou.Cangjie.ContextSnapshot.Strategy.get -> string!
+Penghou.Cangjie.ContextSnapshot.Strategy.init -> void
+Penghou.Cangjie.ContextSnapshot.StrategyVersion.get -> string!
+Penghou.Cangjie.ContextSnapshot.StrategyVersion.init -> void
+Penghou.Cangjie.ContextSnapshotResolution
+Penghou.Cangjie.ContextSnapshotResolution.Items.get -> System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextItem!>!
+Penghou.Cangjie.ContextSnapshotResolution.Items.init -> void
+Penghou.Cangjie.ContextSnapshotResolution.Snapshot.get -> Penghou.Cangjie.ContextSnapshot!
+Penghou.Cangjie.ContextSnapshotResolution.Snapshot.init -> void
 Penghou.Cangjie.ContextSource
 Penghou.Cangjie.ContextSource.ContentHash.get -> string?
 Penghou.Cangjie.ContextSource.ContentHash.init -> void
@@ -136,8 +158,11 @@ Penghou.Cangjie.IContextStore.GetAsync(System.Guid id, System.Threading.Cancella
 Penghou.Cangjie.IContextStore.GetHistoryByKeyAsync(string! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextItem!>!>
 Penghou.Cangjie.IContextStore.GetLatestByKeyAsync(string! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem?>
 Penghou.Cangjie.IContextStore.GetRelationsAsync(System.Guid id, Penghou.Cangjie.ContextRelationDirection direction = Penghou.Cangjie.ContextRelationDirection.Outgoing, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelation!>!>
+Penghou.Cangjie.IContextStore.GetSnapshotAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextSnapshot?>
 Penghou.Cangjie.IContextStore.QueryRelationsAsync(System.Guid id, Penghou.Cangjie.ContextRelationQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelation!>!>
+Penghou.Cangjie.IContextStore.ResolveSnapshotAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextSnapshotResolution?>
 Penghou.Cangjie.IContextStore.SearchAsync(Penghou.Cangjie.ContextQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextSearchHit!>!>
 Penghou.Cangjie.IContextStore.StoreAsync(Penghou.Cangjie.ContextItem! item, Penghou.Cangjie.ContextWriteOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem!>
+Penghou.Cangjie.IContextStore.StoreSnapshotAsync(Penghou.Cangjie.ContextSnapshot! snapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextSnapshot!>
 static Penghou.Cangjie.CangjieDiagnostics.ActivitySource.get -> System.Diagnostics.ActivitySource!
 static Penghou.Cangjie.ContextStoreRelationExtensions.GetRelatedItemsAsync(this Penghou.Cangjie.IContextStore! store, System.Guid id, Penghou.Cangjie.ContextRelationQuery? query = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelatedItem!>!>

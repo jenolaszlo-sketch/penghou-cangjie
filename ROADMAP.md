@@ -325,6 +325,10 @@ Acceptance criteria:
 
 ## Phase C7 — Immutable context snapshots
 
+Status: initial SQLite vertical implemented with atomic immutable creation,
+ordered restart-safe reconstruction, exact physical references, selection
+metadata, and deletion/expiration pinning.
+
 Snapshots record exactly what a consumer received and why it was selected.
 
 ```text
