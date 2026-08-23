@@ -279,6 +279,10 @@ Acceptance criteria:
 
 ## Phase C6 — Retrieval contract and diagnostics
 
+Status: initial strategy metadata and privacy-safe diagnostic activity vertical
+implemented. Strategy-local score semantics and richer non-sensitive match
+details remain deliberately deferred until their contracts are well-defined.
+
 Stabilize a narrow contract that can support exact, lexical,
 relationship-aware, semantic, and hybrid strategies without coupling the core
 to an embedding provider.

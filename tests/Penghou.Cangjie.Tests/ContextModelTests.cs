@@ -21,6 +21,14 @@ public sealed class ContextModelTests
     }
 
     [Fact]
+    public void SearchStrategies_AreStableTextIdentifiers()
+    {
+        Assert.Equal("exact", ContextSearchStrategies.Exact);
+        Assert.Equal("lexical", ContextSearchStrategies.Lexical);
+        Assert.Equal("Penghou.Cangjie", CangjieDiagnostics.ActivitySourceName);
+    }
+
+    [Fact]
     public void RelationQueryDefaults_AreBoundedAndDirectional()
     {
         var query = new ContextRelationQuery();

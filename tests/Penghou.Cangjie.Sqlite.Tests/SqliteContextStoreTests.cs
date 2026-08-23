@@ -479,6 +479,49 @@ public sealed class SqliteContextStoreTests : IDisposable
         results.Select(hit => hit.Rank).Should().Equal(1, 2);
         lexicalResults.Should().ContainSingle()
             .Which.Item.Id.Should().Be(preferred.Id);
+        lexicalResults[0].Strategy.Should().Be(ContextSearchStrategies.Lexical);
+        lexicalResults[0].StrategyVersion.Should().Be("sqlite-v1");
+        lexicalResults[0].Score.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Search_DiagnosticsExposeCountsWithoutSensitiveValues()
+    {
+        var store = CreateStore();
+        await store.StoreAsync(Item("private search phrase") with
+        {
+            Scope = "private:scope",
+            Tags = ["private-tag"]
+        });
+        System.Diagnostics.Activity? completed = null;
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = source =>
+                source.Name == CangjieDiagnostics.ActivitySourceName,
+            Sample = static (ref System.Diagnostics.ActivityCreationOptions<
+                System.Diagnostics.ActivityContext> _) =>
+                    System.Diagnostics.ActivitySamplingResult.AllData,
+            ActivityStopped = activity => completed = activity
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+
+        await store.SearchAsync(new ContextQuery
+        {
+            Text = "private search phrase",
+            Scope = "private:scope",
+            Tags = ["private-tag"],
+            Limit = 7
+        });
+
+        completed.Should().NotBeNull();
+        completed!.OperationName.Should().Be("context.search");
+        completed.GetTagItem("cangjie.search.strategy")
+            .Should().Be(ContextSearchStrategies.Lexical);
+        completed.GetTagItem("cangjie.search.scope_count").Should().Be(1);
+        completed.GetTagItem("cangjie.search.tag_count").Should().Be(1);
+        completed.GetTagItem("cangjie.search.result_count").Should().Be(1);
+        completed.TagObjects.Select(tag => tag.Value?.ToString())
+            .Should().NotContain(["private search phrase", "private:scope", "private-tag"]);
     }
 
     [Fact]

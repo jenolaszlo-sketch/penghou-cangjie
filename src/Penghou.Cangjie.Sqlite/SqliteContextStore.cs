@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -250,12 +251,22 @@ public sealed class SqliteContextStore : IContextStore
         CancellationToken cancellationToken = default)
     {
         ValidateQuery(query);
+        var strategy = string.IsNullOrWhiteSpace(query.Text)
+            ? ContextSearchStrategies.Exact
+            : ContextSearchStrategies.Lexical;
+        using var activity = CangjieDiagnostics.ActivitySource.StartActivity(
+            "context.search",
+            ActivityKind.Internal);
+        SetSearchRequestDiagnostics(activity, query, strategy);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
         await using var connection = await OpenAsync(cancellationToken)
             .ConfigureAwait(false);
         var ftsQuery = SafeFtsQueryBuilder.Build(query.Text, query.SearchMode);
         if (!string.IsNullOrWhiteSpace(query.Text) && ftsQuery is null)
+        {
+            activity?.SetTag("cangjie.search.result_count", 0);
             return [];
+        }
 
         var parameters = new List<(string Name, object? Value)>();
         var where = new List<string>();
@@ -333,10 +344,32 @@ public sealed class SqliteContextStore : IContextStore
             results.Add(new ContextSearchHit
             {
                 Item = ReadItem(reader),
-                Rank = results.Count + 1
+                Rank = results.Count + 1,
+                Strategy = strategy,
+                StrategyVersion = "sqlite-v1"
             });
         }
+        activity?.SetTag("cangjie.search.result_count", results.Count);
         return results;
+    }
+
+    private static void SetSearchRequestDiagnostics(
+        Activity? activity,
+        ContextQuery query,
+        string strategy)
+    {
+        if (activity is null)
+            return;
+
+        activity.SetTag("cangjie.search.strategy", strategy);
+        activity.SetTag("cangjie.search.has_text", query.Text is not null);
+        activity.SetTag(
+            "cangjie.search.scope_count",
+            query.Scopes?.Count ?? (query.Scope is null ? 0 : 1));
+        activity.SetTag("cangjie.search.kind_count", query.Kinds?.Count ?? 0);
+        activity.SetTag("cangjie.search.tag_count", query.Tags?.Count ?? 0);
+        activity.SetTag("cangjie.search.limit", query.Limit);
+        activity.SetTag("cangjie.search.include_expired", query.IncludeExpired);
     }
 
     /// <inheritdoc />

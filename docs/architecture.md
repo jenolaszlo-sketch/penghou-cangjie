@@ -107,6 +107,11 @@ Current retrieval is exact-filtered lexical search:
 `ContextSearchHit.Rank` is the one-based position in one result set. It is not a
 globally comparable relevance or confidence score.
 
+Each hit carries a stable strategy identifier and an implementation-defined
+strategy version. `Score` is optional and strategy-local; the SQLite initial
+vertical deliberately leaves it unset until its direction and useful range can
+be exposed without suggesting cross-query comparability.
+
 For layered retrieval, scope identifiers remain opaque. The caller supplies
 their precedence explicitly through `ContextQuery.Scopes`. A keyed concept is
 selected from its first matching scope; unkeyed records are never conflated.
@@ -118,6 +123,14 @@ Relationship retrieval remains one hop and implementation-neutral. The legacy
 100 results, and deterministic ordering. `GetRelatedItemsAsync` resolves the
 opposite item and reports dangling relations as integrity failures. Multi-hop
 graph traversal remains outside the current contract.
+
+## Diagnostics
+
+Cangjie uses the built-in .NET `ActivitySource` named `Penghou.Cangjie`.
+SQLite search emits `context.search` with structural tags for strategy,
+requested limit, filter counts, expiration mode, and result count. It does not
+emit query text, stored content, scope/key/source values, or tag values. When no
+listener is installed, no activity is allocated.
 
 ## Lifetime and deletion
 

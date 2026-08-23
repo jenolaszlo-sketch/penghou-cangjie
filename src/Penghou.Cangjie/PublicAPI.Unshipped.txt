@@ -1,4 +1,5 @@
 #nullable enable
+const Penghou.Cangjie.CangjieDiagnostics.ActivitySourceName = "Penghou.Cangjie" -> string!
 const Penghou.Cangjie.ContextKinds.Artifact = "artifact" -> string!
 const Penghou.Cangjie.ContextKinds.Decision = "decision" -> string!
 const Penghou.Cangjie.ContextKinds.Evidence = "evidence" -> string!
@@ -10,6 +11,9 @@ const Penghou.Cangjie.ContextRelationKinds.ProducedBy = "produced-by" -> string!
 const Penghou.Cangjie.ContextRelationKinds.References = "references" -> string!
 const Penghou.Cangjie.ContextRelationKinds.Supersedes = "supersedes" -> string!
 const Penghou.Cangjie.ContextRelationKinds.Supports = "supports" -> string!
+const Penghou.Cangjie.ContextSearchStrategies.Exact = "exact" -> string!
+const Penghou.Cangjie.ContextSearchStrategies.Lexical = "lexical" -> string!
+Penghou.Cangjie.CangjieDiagnostics
 Penghou.Cangjie.ContextItem
 Penghou.Cangjie.ContextItem.Content.get -> string!
 Penghou.Cangjie.ContextItem.Content.init -> void
@@ -97,10 +101,17 @@ Penghou.Cangjie.ContextSearchHit.Item.get -> Penghou.Cangjie.ContextItem!
 Penghou.Cangjie.ContextSearchHit.Item.init -> void
 Penghou.Cangjie.ContextSearchHit.Rank.get -> int
 Penghou.Cangjie.ContextSearchHit.Rank.init -> void
+Penghou.Cangjie.ContextSearchHit.Score.get -> double?
+Penghou.Cangjie.ContextSearchHit.Score.init -> void
+Penghou.Cangjie.ContextSearchHit.Strategy.get -> string!
+Penghou.Cangjie.ContextSearchHit.Strategy.init -> void
+Penghou.Cangjie.ContextSearchHit.StrategyVersion.get -> string!
+Penghou.Cangjie.ContextSearchHit.StrategyVersion.init -> void
 Penghou.Cangjie.ContextSearchMode
 Penghou.Cangjie.ContextSearchMode.AllTerms = 0 -> Penghou.Cangjie.ContextSearchMode
 Penghou.Cangjie.ContextSearchMode.AnyTerm = 1 -> Penghou.Cangjie.ContextSearchMode
 Penghou.Cangjie.ContextSearchMode.Phrase = 2 -> Penghou.Cangjie.ContextSearchMode
+Penghou.Cangjie.ContextSearchStrategies
 Penghou.Cangjie.ContextSource
 Penghou.Cangjie.ContextSource.ContentHash.get -> string?
 Penghou.Cangjie.ContextSource.ContentHash.init -> void
@@ -128,4 +139,5 @@ Penghou.Cangjie.IContextStore.GetRelationsAsync(System.Guid id, Penghou.Cangjie.
 Penghou.Cangjie.IContextStore.QueryRelationsAsync(System.Guid id, Penghou.Cangjie.ContextRelationQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelation!>!>
 Penghou.Cangjie.IContextStore.SearchAsync(Penghou.Cangjie.ContextQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextSearchHit!>!>
 Penghou.Cangjie.IContextStore.StoreAsync(Penghou.Cangjie.ContextItem! item, Penghou.Cangjie.ContextWriteOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem!>
+static Penghou.Cangjie.CangjieDiagnostics.ActivitySource.get -> System.Diagnostics.ActivitySource!
 static Penghou.Cangjie.ContextStoreRelationExtensions.GetRelatedItemsAsync(this Penghou.Cangjie.IContextStore! store, System.Guid id, Penghou.Cangjie.ContextRelationQuery? query = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelatedItem!>!>

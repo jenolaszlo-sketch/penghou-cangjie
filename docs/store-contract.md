@@ -65,6 +65,14 @@ integrity error and must not be silently omitted.
 - Expired items are excluded unless explicitly requested.
 - Equal matches have deterministic ordering.
 - Result rank is local to one query result set.
+- Every result identifies its retrieval strategy and implementation-defined
+  strategy version. Optional scores are local to that exact strategy/version
+  and must not be compared across either boundary.
+
+Search implementations emit `context.search` activities through
+`CangjieDiagnostics.ActivitySource`. Built-in tags contain only strategy,
+boolean flags, limits, and counts. Query text, context content, scope values,
+logical keys, source URIs, and tag values are not recorded.
 
 ## Retention
 
@@ -97,6 +105,7 @@ data. `ContextStoreConformanceSuite.VerifyAsync` currently verifies:
   bounds, and related-item projection;
 - exact scope/kind lexical retrieval isolation and ordered multi-scope
   precedence with logical-key deduplication.
+- retrieval strategy metadata.
 
 The suite throws `InvalidOperationException` naming the failed check. It does
 not depend on a particular test framework, so implementations can call it from

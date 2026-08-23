@@ -169,6 +169,10 @@ public static class ContextStoreConformanceSuite
             },
             cancellationToken).ConfigureAwait(false);
         Require(search.Count == 1 && search[0].Item.Id == standalone.Id, "search.filters");
+        Require(
+            search[0].Strategy == ContextSearchStrategies.Lexical &&
+            !string.IsNullOrWhiteSpace(search[0].StrategyVersion),
+            "search.strategy-metadata");
         var fallbackScope = $"{scope}:fallback";
         var unrelatedScope = $"{scope}:unrelated";
         var preferredConcept = await store.StoreAsync(
