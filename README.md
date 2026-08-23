@@ -3,7 +3,9 @@
 Penghou.Cangjie is a lightweight, local-first, provenance-aware context store
 for .NET AI applications. It provides explicit persistent context, SQLite FTS5
 retrieval, scopes, tags, relationships, logical history, and evidence tracking
-without requiring an agent framework, vector database, or LLM.
+without requiring an agent framework, vector database, or LLM. Immutable
+snapshots make the exact context supplied to a consumer reproducible after a
+restart.
 
 ## Packages
 
@@ -16,7 +18,7 @@ without requiring an agent framework, vector database, or LLM.
 ## Install
 
 ```bash
-dotnet add package Penghou.Cangjie.Sqlite --prerelease
+dotnet add package Penghou.Cangjie.Sqlite --version 0.1.0-preview.2
 ```
 
 ## Quick start
@@ -48,9 +50,19 @@ var evidence = await store.StoreAsync(new ContextItem
 
 var results = await store.SearchAsync(new ContextQuery
 {
-    Scope = "repo:my-app",
+    // Exact scopes are listed from highest to lowest precedence.
+    Scopes = ["run:architecture", "repo:my-app"],
     Text = "reverse proxy",
     Tags = ["architecture"]
+});
+
+var snapshot = await store.StoreSnapshotAsync(new ContextSnapshot
+{
+    ItemIds = results.Select(hit => hit.Item.Id).ToArray(),
+    QueryIdentity = "architecture-input:v1",
+    Strategy = results.FirstOrDefault()?.Strategy ?? ContextSearchStrategies.Exact,
+    StrategyVersion = results.FirstOrDefault()?.StrategyVersion ?? "sqlite-v1",
+    Purpose = "architecture review"
 });
 ```
 
@@ -68,15 +80,17 @@ services.AddCangjieSqlite(options =>
 
 `ContextItem.Id` identifies one immutable observation or revision. The optional
 `Key` identifies the logical concept across revisions. Append changed decisions
-and knowledge as new items, then connect them explicitly:
+and knowledge as new items using the same exact scope and key:
 
 ```csharp
-await store.AddRelationAsync(new ContextRelation
+var revisedDecision = await store.StoreAsync(new ContextItem
 {
-    FromId = revisedDecision.Id,
-    ToId = originalDecision.Id,
-    Kind = ContextRelationKinds.Supersedes
-});
+    Scope = originalDecision.Scope,
+    Key = originalDecision.Key,
+    Kind = ContextKinds.Decision,
+    Content = "Use the revised boundary.",
+    Provenance = new ContextProvenance { Producer = "solo:architecture" }
+}, new ContextWriteOptions { ExpectedRevision = originalDecision.Revision });
 ```
 
 Use `GetLatestByKeyAsync` for the current revision and
@@ -93,6 +107,8 @@ own stable identifiers.
 ## Search semantics
 
 - Scope and logical-key matching are exact.
+- `Scopes` supplies exact namespaces in descending precedence. Keyed concepts
+  are returned once from their highest-precedence requested scope.
 - All requested tags must be present; tags are normalized to lowercase.
 - Empty `Text` performs indexed filtering without FTS.
 - User text is tokenized and escaped before reaching FTS5.
@@ -100,6 +116,21 @@ own stable identifiers.
 - Expired items are hidden from search by default but remain available by ID.
 - `Rank` is the one-based position within the returned result set, not a
   globally comparable score.
+- Every hit identifies its retrieval strategy and version. Optional scores are
+  meaningful only within that exact strategy/version.
+
+Search emits privacy-safe `context.search` activities through
+`CangjieDiagnostics.ActivitySource`. Built-in telemetry contains structural
+counts and flags, never query text, context content, scope names, keys, source
+URIs, or tag values.
+
+## Immutable snapshots
+
+A snapshot records ordered physical item IDs, query identity, retrieval
+strategy/version, selection time, purpose, and optional metadata. It does not
+duplicate context payloads. Snapshot creation is atomic, references pin their
+items against ordinary deletion and expiration cleanup, and
+`ResolveSnapshotAsync` reconstructs the exact historical selection in order.
 
 ## What Cangjie is not
 
@@ -127,15 +158,16 @@ Application / Agent / Workflow
          SQLite
          |- records and scopes
          |- provenance relations
+         |- immutable snapshots and pins
          |- tags and expiration
          `- FTS5 lexical search
 ```
 
 ## Roadmap
 
-See the [project roadmap](ROADMAP.md) for immutable logical revisions,
-first-class provenance, scoped retrieval, pinned context snapshots, and the
-planned Solo/Zhinu integration proof.
+The initial foundation roadmap through the Solo/Zhinu restart proof is
+implemented. See the [project roadmap](ROADMAP.md) for status and intentionally
+deferred, evidence-driven extensions.
 
 The `Penghou.Cangjie.Integration.Tests` project contains that restart-safe
 reference-flow proof without adding Solo or Zhinu dependencies to Cangjie core.
