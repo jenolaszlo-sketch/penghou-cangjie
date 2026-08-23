@@ -259,10 +259,26 @@ public sealed class SqliteContextStore : IContextStore
 
         var parameters = new List<(string Name, object? Value)>();
         var where = new List<string>();
+        string? scopePriority = null;
         if (query.Scope is not null)
         {
             where.Add("ci.scope = $scope");
             parameters.Add(("$scope", query.Scope));
+        }
+        else if (query.Scopes is { Count: > 0 })
+        {
+            var scopeParameters = new List<string>(query.Scopes.Count);
+            var scopeCases = new List<string>(query.Scopes.Count);
+            for (var index = 0; index < query.Scopes.Count; index++)
+            {
+                var name = $"$scope{index}";
+                scopeParameters.Add(name);
+                scopeCases.Add($"WHEN {name} THEN {index}");
+                parameters.Add((name, query.Scopes[index]));
+            }
+
+            where.Add($"ci.scope IN ({string.Join(", ", scopeParameters)})");
+            scopePriority = $"CASE ci.scope {string.Join(" ", scopeCases)} END";
         }
         if (query.Key is not null)
         {
@@ -294,14 +310,20 @@ public sealed class SqliteContextStore : IContextStore
         var order = ftsQuery is null
             ? "ci.created_at DESC, ci.id ASC"
             : "bm25(context_items_fts), ci.created_at DESC, ci.id ASC";
-        var sql = $"""
-            SELECT {SelectColumns}
-            FROM context_items ci
-            {join}
-            WHERE {(where.Count == 0 ? "1 = 1" : string.Join(" AND ", where))}
-            ORDER BY {order}
-            LIMIT $limit;
-            """;
+        var sql = scopePriority is null
+            ? $"""
+                SELECT {SelectColumns}
+                FROM context_items ci
+                {join}
+                WHERE {(where.Count == 0 ? "1 = 1" : string.Join(" AND ", where))}
+                ORDER BY {order}
+                LIMIT $limit;
+                """
+            : BuildLayeredScopeQuery(
+                join,
+                where,
+                scopePriority,
+                ftsQuery is not null);
         await using var command = CreateCommand(connection, sql, parameters);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -909,6 +931,17 @@ public sealed class SqliteContextStore : IContextStore
             throw new ArgumentOutOfRangeException(nameof(query));
         if (query.Scope is not null && string.IsNullOrWhiteSpace(query.Scope))
             throw new ArgumentException("Scope must not be blank.", nameof(query));
+        if (query.Scope is not null && query.Scopes is not null)
+            throw new ArgumentException("Scope and Scopes cannot both be supplied.", nameof(query));
+        if (query.Scopes is { Count: 0 or > 100 })
+            throw new ArgumentOutOfRangeException(nameof(query));
+        if (query.Scopes?.Any(string.IsNullOrWhiteSpace) == true)
+            throw new ArgumentException("Scopes must not contain blank values.", nameof(query));
+        if (query.Scopes is not null &&
+            query.Scopes.Distinct(StringComparer.Ordinal).Count() != query.Scopes.Count)
+        {
+            throw new ArgumentException("Scopes must not contain duplicates.", nameof(query));
+        }
         if (query.Key is not null && string.IsNullOrWhiteSpace(query.Key))
             throw new ArgumentException("Key must not be blank.", nameof(query));
         if (query.SourceUri is not null && string.IsNullOrWhiteSpace(query.SourceUri))
@@ -1004,6 +1037,43 @@ public sealed class SqliteContextStore : IContextStore
             "O",
             CultureInfo.InvariantCulture,
             DateTimeStyles.RoundtripKind);
+
+    private static string BuildLayeredScopeQuery(
+        string join,
+        IReadOnlyCollection<string> where,
+        string scopePriority,
+        bool hasFtsQuery)
+    {
+        var relevance = hasFtsQuery ? "bm25(context_items_fts)" : "0.0";
+        return $"""
+            WITH candidates AS (
+                SELECT {SelectColumns},
+                       {scopePriority} AS scope_priority,
+                       {relevance} AS search_relevance,
+                       CASE
+                           WHEN ci.logical_key IS NULL THEN 'id:' || ci.id
+                           ELSE 'key:' || ci.logical_key
+                       END AS concept_identity
+                FROM context_items ci
+                {join}
+                WHERE {string.Join(" AND ", where)}
+            ), ranked AS (
+                SELECT *,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY concept_identity
+                           ORDER BY scope_priority ASC, search_relevance ASC,
+                                    created_at DESC, id ASC
+                       ) AS concept_rank
+                FROM candidates
+            )
+            SELECT *
+            FROM ranked
+            WHERE concept_rank = 1
+            ORDER BY scope_priority ASC, search_relevance ASC,
+                     created_at DESC, id ASC
+            LIMIT $limit;
+            """;
+    }
 
     private const string SelectColumns = """
         ci.id, ci.scope, ci.logical_key, ci.revision, ci.kind, ci.content,

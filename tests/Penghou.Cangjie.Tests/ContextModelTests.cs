@@ -10,6 +10,7 @@ public sealed class ContextModelTests
         Assert.Equal(10, query.Limit);
         Assert.Equal(ContextSearchMode.AllTerms, query.SearchMode);
         Assert.False(query.IncludeExpired);
+        Assert.Null(query.Scopes);
     }
 
     [Fact]

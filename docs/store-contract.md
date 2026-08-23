@@ -55,6 +55,10 @@ integrity error and must not be silently omitted.
 ## Search
 
 - Scope and logical key are exact filters.
+- `Scopes` is an ordered set of exact scopes in descending precedence and is
+  mutually exclusive with `Scope`.
+- Layered retrieval returns a keyed logical concept once, choosing its
+  highest-precedence requested scope; unkeyed physical items remain distinct.
 - Requested tags use all-tags semantics.
 - Kinds are exact extensible identifiers.
 - Limits are enforced and bounded by the contract.
@@ -91,7 +95,8 @@ data. `ContextStoreConformanceSuite.VerifyAsync` currently verifies:
 - equivalent and conflicting idempotent retries across peers;
 - relation persistence, both traversal directions, exact kind filtering,
   bounds, and related-item projection;
-- exact scope/kind lexical retrieval isolation.
+- exact scope/kind lexical retrieval isolation and ordered multi-scope
+  precedence with logical-key deduplication.
 
 The suite throws `InvalidOperationException` naming the failed check. It does
 not depend on a particular test framework, so implementations can call it from

@@ -169,6 +169,43 @@ public static class ContextStoreConformanceSuite
             },
             cancellationToken).ConfigureAwait(false);
         Require(search.Count == 1 && search[0].Item.Id == standalone.Id, "search.filters");
+        var fallbackScope = $"{scope}:fallback";
+        var unrelatedScope = $"{scope}:unrelated";
+        var preferredConcept = await store.StoreAsync(
+            Item(scope, "preferred concept", ContextKinds.Knowledge) with
+            {
+                Key = "shared:concept"
+            },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        await store.StoreAsync(
+            Item(fallbackScope, "fallback concept", ContextKinds.Knowledge) with
+            {
+                Key = "shared:concept"
+            },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var fallbackOnly = await store.StoreAsync(
+            Item(fallbackScope, "fallback only", ContextKinds.Knowledge) with
+            {
+                Key = "fallback:only"
+            },
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        await store.StoreAsync(
+            Item(unrelatedScope, "unrelated", ContextKinds.Knowledge),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var layered = await peer.SearchAsync(
+            new ContextQuery
+            {
+                Scopes = [scope, fallbackScope],
+                Kinds = [ContextKinds.Knowledge],
+                Limit = 10
+            },
+            cancellationToken).ConfigureAwait(false);
+        Require(
+            layered.Count(hit => hit.Item.Key == "shared:concept") == 1 &&
+            layered.Any(hit => hit.Item.Id == preferredConcept.Id) &&
+            layered.Any(hit => hit.Item.Id == fallbackOnly.Id) &&
+            layered.All(hit => hit.Item.Scope != unrelatedScope),
+            "search.ordered-scopes");
         checks.Add("scoped-retrieval");
 
         return new ContextStoreConformanceReport

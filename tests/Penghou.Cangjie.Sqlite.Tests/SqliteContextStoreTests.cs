@@ -435,6 +435,72 @@ public sealed class SqliteContextStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_OrderedScopesPreferAndDeduplicateLogicalConcepts()
+    {
+        var store = CreateStore();
+        var preferred = await store.StoreAsync(Item("preferred value") with
+        {
+            Scope = "scope:step",
+            Key = "setting:theme"
+        });
+        clock.Advance(TimeSpan.FromSeconds(1));
+        await store.StoreAsync(Item("fallback value") with
+        {
+            Scope = "scope:project",
+            Key = "setting:theme"
+        });
+        await store.StoreAsync(Item("project only") with
+        {
+            Scope = "scope:project",
+            Key = "setting:language"
+        });
+        await store.StoreAsync(Item("must not leak") with
+        {
+            Scope = "scope:unrelated"
+        });
+
+        var results = await store.SearchAsync(new ContextQuery
+        {
+            Scopes = ["scope:step", "scope:project"],
+            Limit = 10
+        });
+        var lexicalResults = await store.SearchAsync(new ContextQuery
+        {
+            Text = "value",
+            Scopes = ["scope:step", "scope:project"],
+            Limit = 10
+        });
+
+        results.Select(hit => hit.Item.Id).Should().ContainInOrder(
+            preferred.Id,
+            results.Single(hit => hit.Item.Content == "project only").Item.Id);
+        results.Should().HaveCount(2);
+        results.Should().NotContain(hit => hit.Item.Scope == "scope:unrelated");
+        results.Select(hit => hit.Rank).Should().Equal(1, 2);
+        lexicalResults.Should().ContainSingle()
+            .Which.Item.Id.Should().Be(preferred.Id);
+    }
+
+    [Fact]
+    public async Task Search_RejectsAmbiguousOrInvalidScopeSets()
+    {
+        var store = CreateStore();
+
+        var ambiguous = () => store.SearchAsync(new ContextQuery
+        {
+            Scope = "one",
+            Scopes = ["two"]
+        }).AsTask();
+        var duplicate = () => store.SearchAsync(new ContextQuery
+        {
+            Scopes = ["one", "one"]
+        }).AsTask();
+
+        await ambiguous.Should().ThrowAsync<ArgumentException>();
+        await duplicate.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
     public async Task ConcurrentWrites_RemainConsistent()
     {
         var store = CreateStore();

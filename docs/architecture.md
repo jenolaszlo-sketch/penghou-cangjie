@@ -96,6 +96,8 @@ preview schema is rejected with an instruction to recreate the database.
 Current retrieval is exact-filtered lexical search:
 
 - exact scope, logical key, source URI, and kind filters;
+- caller-ordered exact scope sets, with precedence before lexical relevance;
+- deterministic logical-key deduplication across requested scopes;
 - all-requested-tags semantics;
 - normalized safe FTS5 all-term, any-term, or phrase queries;
 - optional inclusion of expired items;
@@ -104,6 +106,11 @@ Current retrieval is exact-filtered lexical search:
 
 `ContextSearchHit.Rank` is the one-based position in one result set. It is not a
 globally comparable relevance or confidence score.
+
+For layered retrieval, scope identifiers remain opaque. The caller supplies
+their precedence explicitly through `ContextQuery.Scopes`. A keyed concept is
+selected from its first matching scope; unkeyed records are never conflated.
+Cangjie does not parse scope delimiters or infer application hierarchy.
 
 Relationship retrieval remains one hop and implementation-neutral. The legacy
 `GetRelationsAsync` operation preserves its existing unbounded behavior;

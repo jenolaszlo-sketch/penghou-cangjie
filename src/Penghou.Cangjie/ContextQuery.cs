@@ -9,6 +9,12 @@ public sealed record ContextQuery
     /// <summary>Gets an optional exact scope filter.</summary>
     public string? Scope { get; init; }
 
+    /// <summary>
+    /// Gets optional exact scopes in descending precedence. Keyed logical
+    /// concepts are returned once from their highest-precedence scope.
+    /// </summary>
+    public IReadOnlyList<string>? Scopes { get; init; }
+
     /// <summary>Gets an optional exact logical-key filter.</summary>
     public string? Key { get; init; }
 

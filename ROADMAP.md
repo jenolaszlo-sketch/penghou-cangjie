@@ -245,6 +245,10 @@ only when a demonstrated retrieval use case requires them.
 
 ## Phase C5 — Scoped retrieval
 
+Status: initial SQLite vertical implemented with caller-ordered exact scopes,
+scope-first deterministic ranking, logical-key deduplication, isolation tests,
+and reusable provider conformance coverage.
+
 Scopes remain opaque, exact, caller-owned namespaces. Cangjie does not infer
 hierarchy from delimiters or hard-code Solo concepts such as repository,
 session, workflow, or step.
