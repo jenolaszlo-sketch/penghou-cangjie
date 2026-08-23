@@ -75,4 +75,12 @@ public interface IContextStore
     /// </summary>
     ValueTask<int> DeleteExpiredAsync(
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Performs a safe health probe: verifies the backing store can be opened,
+    /// its schema is compatible, and a trivial read succeeds. Readiness
+    /// endpoints use this; it must never mutate state.
+    /// </summary>
+    ValueTask<ContextStoreHealth> CheckHealthAsync(
+        CancellationToken cancellationToken = default);
 }

@@ -11,4 +11,11 @@ public sealed class CangjieSqliteOptions
 
     /// <summary>Gets or sets how long SQLite waits for a busy database.</summary>
     public TimeSpan BusyTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Gets or sets whether SQLite connection pooling is enabled. Leave enabled
+    /// in production; disable for isolated per-test databases so connections
+    /// close immediately.
+    /// </summary>
+    public bool Pooling { get; set; } = true;
 }

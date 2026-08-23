@@ -7,9 +7,12 @@ Penghou.Cangjie.Sqlite.CangjieSqliteOptions.DatabasePath.get -> string!
 Penghou.Cangjie.Sqlite.CangjieSqliteOptions.DatabasePath.set -> void
 Penghou.Cangjie.Sqlite.CangjieSqliteOptions.EnableWal.get -> bool
 Penghou.Cangjie.Sqlite.CangjieSqliteOptions.EnableWal.set -> void
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions.Pooling.get -> bool
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions.Pooling.set -> void
 Penghou.Cangjie.Sqlite.ServiceCollectionExtensions
 Penghou.Cangjie.Sqlite.SqliteContextStore
 Penghou.Cangjie.Sqlite.SqliteContextStore.AddRelationAsync(Penghou.Cangjie.ContextRelation! relation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Cangjie.Sqlite.SqliteContextStore.CheckHealthAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextStoreHealth!>
 Penghou.Cangjie.Sqlite.SqliteContextStore.DeleteAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Penghou.Cangjie.Sqlite.SqliteContextStore.DeleteExpiredAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<int>
 Penghou.Cangjie.Sqlite.SqliteContextStore.GetAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem?>

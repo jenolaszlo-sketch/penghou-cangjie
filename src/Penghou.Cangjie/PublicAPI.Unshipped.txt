@@ -1,5 +1,6 @@
 #nullable enable
 const Penghou.Cangjie.CangjieDiagnostics.ActivitySourceName = "Penghou.Cangjie" -> string!
+const Penghou.Cangjie.CangjieDiagnostics.MeterName = "Penghou.Cangjie" -> string!
 const Penghou.Cangjie.ContextKinds.Artifact = "artifact" -> string!
 const Penghou.Cangjie.ContextKinds.Decision = "decision" -> string!
 const Penghou.Cangjie.ContextKinds.Evidence = "evidence" -> string!
@@ -144,6 +145,17 @@ Penghou.Cangjie.ContextSource.Uri.init -> void
 Penghou.Cangjie.ContextStoreConflictException
 Penghou.Cangjie.ContextStoreConflictException.ContextStoreConflictException(string! message) -> void
 Penghou.Cangjie.ContextStoreConflictException.ContextStoreConflictException(string! message, System.Exception! innerException) -> void
+Penghou.Cangjie.ContextStoreHealth
+Penghou.Cangjie.ContextStoreHealth.Detail.get -> string?
+Penghou.Cangjie.ContextStoreHealth.Detail.init -> void
+Penghou.Cangjie.ContextStoreHealth.IsHealthy.get -> bool
+Penghou.Cangjie.ContextStoreHealth.IsHealthy.init -> void
+Penghou.Cangjie.ContextStoreHealth.SchemaVersion.get -> int?
+Penghou.Cangjie.ContextStoreHealth.SchemaVersion.init -> void
+Penghou.Cangjie.ContextStoreHealth.StoreName.get -> string?
+Penghou.Cangjie.ContextStoreHealth.StoreName.init -> void
+Penghou.Cangjie.ContextStoreHealth.WalMode.get -> bool?
+Penghou.Cangjie.ContextStoreHealth.WalMode.init -> void
 Penghou.Cangjie.ContextStoreRelationExtensions
 Penghou.Cangjie.ContextWriteOptions
 Penghou.Cangjie.ContextWriteOptions.ExpectedRevision.get -> int?
@@ -152,6 +164,7 @@ Penghou.Cangjie.ContextWriteOptions.IdempotencyKey.get -> string?
 Penghou.Cangjie.ContextWriteOptions.IdempotencyKey.init -> void
 Penghou.Cangjie.IContextStore
 Penghou.Cangjie.IContextStore.AddRelationAsync(Penghou.Cangjie.ContextRelation! relation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Cangjie.IContextStore.CheckHealthAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextStoreHealth!>
 Penghou.Cangjie.IContextStore.DeleteAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
 Penghou.Cangjie.IContextStore.DeleteExpiredAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<int>
 Penghou.Cangjie.IContextStore.GetAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem?>
@@ -165,4 +178,8 @@ Penghou.Cangjie.IContextStore.SearchAsync(Penghou.Cangjie.ContextQuery! query, S
 Penghou.Cangjie.IContextStore.StoreAsync(Penghou.Cangjie.ContextItem! item, Penghou.Cangjie.ContextWriteOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem!>
 Penghou.Cangjie.IContextStore.StoreSnapshotAsync(Penghou.Cangjie.ContextSnapshot! snapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextSnapshot!>
 static Penghou.Cangjie.CangjieDiagnostics.ActivitySource.get -> System.Diagnostics.ActivitySource!
+static Penghou.Cangjie.CangjieDiagnostics.ExpiredDeleted.get -> System.Diagnostics.Metrics.Counter<long>!
+static Penghou.Cangjie.CangjieDiagnostics.ItemsStored.get -> System.Diagnostics.Metrics.Counter<long>!
+static Penghou.Cangjie.CangjieDiagnostics.Meter.get -> System.Diagnostics.Metrics.Meter!
+static Penghou.Cangjie.CangjieDiagnostics.SearchDuration.get -> System.Diagnostics.Metrics.Histogram<double>!
 static Penghou.Cangjie.ContextStoreRelationExtensions.GetRelatedItemsAsync(this Penghou.Cangjie.IContextStore! store, System.Guid id, Penghou.Cangjie.ContextRelationQuery? query = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelatedItem!>!>

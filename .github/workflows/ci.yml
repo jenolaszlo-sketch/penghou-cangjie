@@ -16,5 +16,6 @@ jobs:
           dotnet-version: 10.0.x
       - run: dotnet restore Penghou.Cangjie.slnx
       - run: dotnet build Penghou.Cangjie.slnx -c Release --no-restore
+      - run: dotnet format Penghou.Cangjie.slnx --verify-no-changes --no-restore
       - run: dotnet test Penghou.Cangjie.slnx -c Release --no-build --no-restore
       - run: dotnet pack Penghou.Cangjie.slnx -c Release --no-build --no-restore -o artifacts
