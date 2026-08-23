@@ -8,5 +8,9 @@
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <EnablePackageValidation Condition="'$(IsPackable)' == 'true'">true</EnablePackageValidation>
+    <PublicApiAnalyzerEnabled Condition="'$(IsPackable)' == 'true'">true</PublicApiAnalyzerEnabled>
   </PropertyGroup>
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
+  </ItemGroup>
 </Project>

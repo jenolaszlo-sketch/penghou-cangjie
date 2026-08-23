@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Penghou.Cangjie.Sqlite;
+using Penghou.Cangjie.Testing;
 
 namespace Penghou.Cangjie.Sqlite.Tests;
 
@@ -21,13 +22,23 @@ public sealed class SqliteContextStoreTests : IDisposable
         {
             Scope = "repo:solo",
             Key = "decision:storage",
-            Kind = ContextKind.Decision,
+            Kind = ContextKinds.Decision,
             Content = "Use SQLite.",
-            Source = new ContextSource
+            Provenance = new ContextProvenance
             {
-                Uri = "repo://docs/adr/1.md",
-                Kind = "adr",
-                ContentHash = "abc"
+                Producer = "solo:research",
+                ProducerVersion = "1",
+                OriginatedAt = clock.GetUtcNow().AddMinutes(-5),
+                Source = new ContextSource
+                {
+                    Uri = "repo://docs/adr/1.md",
+                    Kind = "adr",
+                    ContentHash = "abc"
+                },
+                Attributes = new Dictionary<string, string>
+                {
+                    ["attempt"] = "17"
+                }
             },
             Metadata = new Dictionary<string, string>
             {
@@ -48,30 +59,78 @@ public sealed class SqliteContextStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task Store_UpdatesAtomicallyAndPreservesOriginalCreatedAt()
+    public async Task Store_PassesReusableConformanceSuite()
+    {
+        await using var fixture = new SqliteConformanceFixture(
+            Path.Combine(directory, "conformance.db"),
+            clock);
+
+        var report = await ContextStoreConformanceSuite.VerifyAsync(fixture);
+
+        report.CompletedChecks.Should().Equal(
+            "store-round-trip",
+            "restart-persistence",
+            "immutable-revisions",
+            "write-conflicts",
+            "scoped-idempotency",
+            "relation-persistence",
+            "scoped-retrieval");
+    }
+
+    [Fact]
+    public async Task Restart_FreshConsumerReconstructsProviderNeutralContext()
+    {
+        var producerStore = CreateStore();
+        var observation = await producerStore.StoreAsync(new ContextItem
+        {
+            Scope = "repo:solo",
+            Key = "observation:persistence",
+            Kind = "repository-observation",
+            Content = "The context store uses SQLite FTS5.",
+            Provenance = new ContextProvenance
+            {
+                Producer = "logical-consumer-a",
+                Source = new ContextSource
+                {
+                    Uri = "repo://src/Penghou.Cangjie.Sqlite/SqliteContextStore.cs",
+                    Kind = "repository-file",
+                    ContentHash = "sha256:abc"
+                }
+            }
+        });
+
+        SqliteConnection.ClearAllPools();
+        var consumerStore = CreateStore();
+        var reconstructed = await consumerStore.GetAsync(observation.Id);
+
+        reconstructed.Should().BeEquivalentTo(observation);
+        reconstructed!.Provenance.Producer.Should().Be("logical-consumer-a");
+        reconstructed.Revision.Should().Be(1);
+        (await consumerStore.SearchAsync(new ContextQuery
+        {
+            Scope = "repo:solo",
+            Text = "SQLite FTS5"
+        })).Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Store_ExistingPhysicalId_IsImmutable()
     {
         var store = CreateStore();
         var original = await store.StoreAsync(Item("old searchable content") with
         {
             Tags = ["old"]
         });
-        clock.Advance(TimeSpan.FromHours(1));
-
-        var updated = await store.StoreAsync(original with
+        var update = async () => await store.StoreAsync(original with
         {
+            Revision = 0,
             Content = "new searchable content",
-            CreatedAt = clock.GetUtcNow(),
             Tags = ["new"]
         });
 
-        updated.CreatedAt.Should().Be(original.CreatedAt);
-        (await store.SearchAsync(new ContextQuery { Text = "old" }))
-            .Should().BeEmpty();
-        (await store.SearchAsync(new ContextQuery
-        {
-            Text = "new",
-            Tags = ["NEW"]
-        })).Should().ContainSingle();
+        await update.Should().ThrowAsync<ContextStoreConflictException>();
+        (await store.GetAsync(original.Id))!.Content.Should()
+            .Be("old searchable content");
     }
 
     [Theory]
@@ -104,13 +163,13 @@ public sealed class SqliteContextStoreTests : IDisposable
         await store.StoreAsync(Item("retry compiler output") with
         {
             Scope = "repo:solo",
-            Kind = ContextKind.Evidence,
+            Kind = ContextKinds.Evidence,
             Tags = ["compiler", "failure"]
         });
         await store.StoreAsync(Item("retry compiler output") with
         {
             Scope = "repo:other",
-            Kind = ContextKind.Knowledge,
+            Kind = ContextKinds.Knowledge,
             Tags = ["compiler"]
         });
 
@@ -118,7 +177,7 @@ public sealed class SqliteContextStoreTests : IDisposable
         {
             Text = "compiler retry",
             Scope = "repo:solo",
-            Kinds = [ContextKind.Evidence],
+            Kinds = [ContextKinds.Evidence],
             Tags = ["compiler", "failure"]
         });
 
@@ -163,17 +222,94 @@ public sealed class SqliteContextStoreTests : IDisposable
         {
             Key = "decision:storage"
         });
-        await store.AddRelationAsync(new ContextRelation
-        {
-            FromId = second.Id,
-            ToId = first.Id,
-            Kind = ContextRelationKinds.Supersedes
-        });
-
+        first.Revision.Should().Be(1);
+        second.Revision.Should().Be(2);
         (await store.GetLatestByKeyAsync("test", "decision:storage"))!
             .Id.Should().Be(second.Id);
         (await store.GetHistoryByKeyAsync("test", "decision:storage"))
             .Select(item => item.Id).Should().Equal(second.Id, first.Id);
+        (await store.GetRelationsAsync(second.Id)).Should().ContainSingle(
+            relation => relation.ToId == first.Id &&
+                relation.Kind == ContextRelationKinds.Supersedes);
+    }
+
+    [Fact]
+    public async Task LogicalKey_ExpectedRevision_RejectsStaleWriter()
+    {
+        var store = CreateStore();
+        await store.StoreAsync(
+            Item("Version one") with { Key = "decision:storage" },
+            new ContextWriteOptions { ExpectedRevision = 0 });
+        await store.StoreAsync(
+            Item("Version two") with { Key = "decision:storage" },
+            new ContextWriteOptions { ExpectedRevision = 1 });
+
+        var staleAppend = async () => await store.StoreAsync(
+            Item("Conflicting version") with { Key = "decision:storage" },
+            new ContextWriteOptions { ExpectedRevision = 1 });
+
+        await staleAppend.Should().ThrowAsync<ContextStoreConflictException>()
+            .WithMessage("*current revision is 2*");
+        (await store.GetHistoryByKeyAsync("test", "decision:storage"))
+            .Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Idempotency_EquivalentRetryReturnsOriginal_ConflictIsRejected()
+    {
+        var store = CreateStore();
+        var item = Item("compiler output");
+        var options = new ContextWriteOptions
+        {
+            IdempotencyKey = "research:attempt-17"
+        };
+
+        var first = await store.StoreAsync(item, options);
+        var retry = await store.StoreAsync(item, options);
+        var conflictingRetry = async () => await store.StoreAsync(
+            item with { Content = "different output" },
+            options);
+
+        retry.Should().BeEquivalentTo(first);
+        await conflictingRetry.Should()
+            .ThrowAsync<ContextStoreConflictException>()
+            .WithMessage("*already associated with different context*");
+        (await store.SearchAsync(new ContextQuery { Scope = "test" }))
+            .Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task LogicalKey_ConcurrentExpectedRevision_AllowsOneWinner()
+    {
+        var store = CreateStore();
+        await store.StoreAsync(
+            Item("Version one") with { Key = "decision:storage" },
+            new ContextWriteOptions { ExpectedRevision = 0 });
+
+        async Task<Exception?> TryAppendAsync(string content)
+        {
+            try
+            {
+                await store.StoreAsync(
+                    Item(content) with { Key = "decision:storage" },
+                    new ContextWriteOptions { ExpectedRevision = 1 });
+                return null;
+            }
+            catch (Exception exception)
+            {
+                return exception;
+            }
+        }
+
+        var outcomes = await Task.WhenAll(
+            TryAppendAsync("Version two A"),
+            TryAppendAsync("Version two B"));
+
+        outcomes.Count(outcome => outcome is null).Should().Be(1);
+        outcomes.Count(outcome => outcome is ContextStoreConflictException)
+            .Should().Be(1);
+        (await store.GetHistoryByKeyAsync("test", "decision:storage"))
+            .Select(item => item.Revision).Should().Equal(2, 1);
     }
 
     [Fact]
@@ -198,13 +334,29 @@ public sealed class SqliteContextStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Delete_KeyedRevision_IsRejectedToProtectHistory()
+    {
+        var store = CreateStore();
+        var revision = await store.StoreAsync(Item("Version one") with
+        {
+            Key = "decision:storage"
+        });
+
+        var deletion = async () => await store.DeleteAsync(revision.Id);
+
+        await deletion.Should().ThrowAsync<ContextStoreConflictException>()
+            .WithMessage("*immutable revision history*");
+        (await store.GetAsync(revision.Id)).Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task Relations_SupportBothDirectionsAndCascadeOnDelete()
     {
         var store = CreateStore();
         var evidence = await store.StoreAsync(Item("compiler output"));
         var decision = await store.StoreAsync(Item("fix the contract") with
         {
-            Kind = ContextKind.Decision
+            Kind = ContextKinds.Decision
         });
         await store.AddRelationAsync(new ContextRelation
         {
@@ -222,6 +374,64 @@ public sealed class SqliteContextStoreTests : IDisposable
         await store.DeleteAsync(evidence.Id);
         (await store.GetRelationsAsync(decision.Id))
             .Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Relations_QueryFiltersKindsLimitsAndResolvesItems()
+    {
+        var store = CreateStore();
+        var source = await store.StoreAsync(Item("source"));
+        var supported = await store.StoreAsync(Item("supported"));
+        var referenced = await store.StoreAsync(Item("referenced"));
+        await store.AddRelationAsync(new ContextRelation
+        {
+            FromId = source.Id,
+            ToId = supported.Id,
+            Kind = ContextRelationKinds.Supports
+        });
+        clock.Advance(TimeSpan.FromSeconds(1));
+        await store.AddRelationAsync(new ContextRelation
+        {
+            FromId = source.Id,
+            ToId = referenced.Id,
+            Kind = ContextRelationKinds.References
+        });
+
+        var filtered = await store.QueryRelationsAsync(
+            source.Id,
+            new ContextRelationQuery
+            {
+                Kinds = [ContextRelationKinds.References],
+                Limit = 1
+            });
+        var related = await store.GetRelatedItemsAsync(
+            source.Id,
+            new ContextRelationQuery
+            {
+                Kinds = [ContextRelationKinds.Supports]
+            });
+
+        filtered.Should().ContainSingle()
+            .Which.ToId.Should().Be(referenced.Id);
+        related.Should().ContainSingle()
+            .Which.Item.Id.Should().Be(supported.Id);
+    }
+
+    [Fact]
+    public async Task Relations_QueryRejectsInvalidBoundsAndKinds()
+    {
+        var store = CreateStore();
+        var item = await store.StoreAsync(Item("source"));
+
+        var invalidLimit = () => store.QueryRelationsAsync(
+            item.Id,
+            new ContextRelationQuery { Limit = 0 }).AsTask();
+        var blankKind = () => store.QueryRelationsAsync(
+            item.Id,
+            new ContextRelationQuery { Kinds = [" "] }).AsTask();
+
+        await invalidLimit.Should().ThrowAsync<ArgumentOutOfRangeException>();
+        await blankKind.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -282,8 +492,9 @@ public sealed class SqliteContextStoreTests : IDisposable
     private static ContextItem Item(string content) => new()
     {
         Scope = "test",
-        Kind = ContextKind.Evidence,
-        Content = content
+        Kind = ContextKinds.Evidence,
+        Content = content,
+        Provenance = new ContextProvenance { Producer = "tests" }
     };
 
     private sealed class ManualTimeProvider(DateTimeOffset now) : TimeProvider
@@ -293,5 +504,32 @@ public sealed class SqliteContextStoreTests : IDisposable
         public override DateTimeOffset GetUtcNow() => current;
 
         public void Advance(TimeSpan duration) => current += duration;
+    }
+
+    private sealed class SqliteConformanceFixture : IContextStoreFixture
+    {
+        private readonly string databasePath;
+        private readonly TimeProvider timeProvider;
+
+        public SqliteConformanceFixture(
+            string databasePath,
+            TimeProvider timeProvider)
+        {
+            this.databasePath = databasePath;
+            this.timeProvider = timeProvider;
+            Store = CreatePeerStore();
+        }
+
+        public IContextStore Store { get; }
+
+        public IContextStore CreatePeerStore() => new SqliteContextStore(
+            new CangjieSqliteOptions { DatabasePath = databasePath },
+            timeProvider);
+
+        public ValueTask DisposeAsync()
+        {
+            SqliteConnection.ClearAllPools();
+            return ValueTask.CompletedTask;
+        }
     }
 }

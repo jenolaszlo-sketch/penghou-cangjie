@@ -9,11 +9,15 @@ var store = new SqliteContextStore(new CangjieSqliteOptions
 var evidence = await store.StoreAsync(new ContextItem
 {
     Scope = "repo:penghou-baize",
-    Kind = ContextKind.Evidence,
+    Kind = ContextKinds.Evidence,
     Content = "The Gateway project references Yarp.ReverseProxy.",
-    Source = new ContextSource
+    Provenance = new ContextProvenance
     {
-        Uri = "repo://src/Gateway/Gateway.csproj"
+        Producer = "sample:research",
+        Source = new ContextSource
+        {
+            Uri = "repo://src/Gateway/Gateway.csproj"
+        }
     },
     Tags = ["architecture", "gateway"]
 });
@@ -22,8 +26,9 @@ var knowledge = await store.StoreAsync(new ContextItem
 {
     Scope = "repo:penghou-baize",
     Key = "knowledge:reverse-proxy",
-    Kind = ContextKind.Knowledge,
-    Content = "The application uses YARP as its reverse proxy."
+    Kind = ContextKinds.Knowledge,
+    Content = "The application uses YARP as its reverse proxy.",
+    Provenance = new ContextProvenance { Producer = "sample:analysis" }
 });
 
 await store.AddRelationAsync(new ContextRelation
@@ -42,5 +47,6 @@ var results = await store.SearchAsync(new ContextQuery
 foreach (var result in results)
 {
     Console.WriteLine($"{result.Rank}: {result.Item.Content}");
-    Console.WriteLine($"Source: {result.Item.Source?.Uri ?? "derived context"}");
+    Console.WriteLine(
+        $"Source: {result.Item.Provenance.Source?.Uri ?? "derived context"}");
 }

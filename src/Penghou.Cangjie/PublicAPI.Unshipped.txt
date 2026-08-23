@@ -1,0 +1,129 @@
+#nullable enable
+const Penghou.Cangjie.ContextKinds.Artifact = "artifact" -> string!
+const Penghou.Cangjie.ContextKinds.Decision = "decision" -> string!
+const Penghou.Cangjie.ContextKinds.Evidence = "evidence" -> string!
+const Penghou.Cangjie.ContextKinds.Knowledge = "knowledge" -> string!
+const Penghou.Cangjie.ContextKinds.Summary = "summary" -> string!
+const Penghou.Cangjie.ContextRelationKinds.Contradicts = "contradicts" -> string!
+const Penghou.Cangjie.ContextRelationKinds.DerivedFrom = "derived-from" -> string!
+const Penghou.Cangjie.ContextRelationKinds.ProducedBy = "produced-by" -> string!
+const Penghou.Cangjie.ContextRelationKinds.References = "references" -> string!
+const Penghou.Cangjie.ContextRelationKinds.Supersedes = "supersedes" -> string!
+const Penghou.Cangjie.ContextRelationKinds.Supports = "supports" -> string!
+Penghou.Cangjie.ContextItem
+Penghou.Cangjie.ContextItem.Content.get -> string!
+Penghou.Cangjie.ContextItem.Content.init -> void
+Penghou.Cangjie.ContextItem.CreatedAt.get -> System.DateTimeOffset
+Penghou.Cangjie.ContextItem.CreatedAt.init -> void
+Penghou.Cangjie.ContextItem.ExpiresAt.get -> System.DateTimeOffset?
+Penghou.Cangjie.ContextItem.ExpiresAt.init -> void
+Penghou.Cangjie.ContextItem.Id.get -> System.Guid
+Penghou.Cangjie.ContextItem.Id.init -> void
+Penghou.Cangjie.ContextItem.Key.get -> string?
+Penghou.Cangjie.ContextItem.Key.init -> void
+Penghou.Cangjie.ContextItem.Kind.get -> string!
+Penghou.Cangjie.ContextItem.Kind.init -> void
+Penghou.Cangjie.ContextItem.Metadata.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Penghou.Cangjie.ContextItem.Metadata.init -> void
+Penghou.Cangjie.ContextItem.Provenance.get -> Penghou.Cangjie.ContextProvenance!
+Penghou.Cangjie.ContextItem.Provenance.init -> void
+Penghou.Cangjie.ContextItem.Revision.get -> int
+Penghou.Cangjie.ContextItem.Revision.init -> void
+Penghou.Cangjie.ContextItem.Scope.get -> string!
+Penghou.Cangjie.ContextItem.Scope.init -> void
+Penghou.Cangjie.ContextItem.Tags.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+Penghou.Cangjie.ContextItem.Tags.init -> void
+Penghou.Cangjie.ContextKinds
+Penghou.Cangjie.ContextProvenance
+Penghou.Cangjie.ContextProvenance.Attributes.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Penghou.Cangjie.ContextProvenance.Attributes.init -> void
+Penghou.Cangjie.ContextProvenance.OriginatedAt.get -> System.DateTimeOffset?
+Penghou.Cangjie.ContextProvenance.OriginatedAt.init -> void
+Penghou.Cangjie.ContextProvenance.Producer.get -> string!
+Penghou.Cangjie.ContextProvenance.Producer.init -> void
+Penghou.Cangjie.ContextProvenance.ProducerVersion.get -> string?
+Penghou.Cangjie.ContextProvenance.ProducerVersion.init -> void
+Penghou.Cangjie.ContextProvenance.Source.get -> Penghou.Cangjie.ContextSource?
+Penghou.Cangjie.ContextProvenance.Source.init -> void
+Penghou.Cangjie.ContextQuery
+Penghou.Cangjie.ContextQuery.IncludeExpired.get -> bool
+Penghou.Cangjie.ContextQuery.IncludeExpired.init -> void
+Penghou.Cangjie.ContextQuery.Key.get -> string?
+Penghou.Cangjie.ContextQuery.Key.init -> void
+Penghou.Cangjie.ContextQuery.Kinds.get -> System.Collections.Generic.IReadOnlyCollection<string!>?
+Penghou.Cangjie.ContextQuery.Kinds.init -> void
+Penghou.Cangjie.ContextQuery.Limit.get -> int
+Penghou.Cangjie.ContextQuery.Limit.init -> void
+Penghou.Cangjie.ContextQuery.Scope.get -> string?
+Penghou.Cangjie.ContextQuery.Scope.init -> void
+Penghou.Cangjie.ContextQuery.SearchMode.get -> Penghou.Cangjie.ContextSearchMode
+Penghou.Cangjie.ContextQuery.SearchMode.init -> void
+Penghou.Cangjie.ContextQuery.SourceUri.get -> string?
+Penghou.Cangjie.ContextQuery.SourceUri.init -> void
+Penghou.Cangjie.ContextQuery.Tags.get -> System.Collections.Generic.IReadOnlyCollection<string!>?
+Penghou.Cangjie.ContextQuery.Tags.init -> void
+Penghou.Cangjie.ContextQuery.Text.get -> string?
+Penghou.Cangjie.ContextQuery.Text.init -> void
+Penghou.Cangjie.ContextRelatedItem
+Penghou.Cangjie.ContextRelatedItem.Item.get -> Penghou.Cangjie.ContextItem!
+Penghou.Cangjie.ContextRelatedItem.Item.init -> void
+Penghou.Cangjie.ContextRelatedItem.Relation.get -> Penghou.Cangjie.ContextRelation!
+Penghou.Cangjie.ContextRelatedItem.Relation.init -> void
+Penghou.Cangjie.ContextRelation
+Penghou.Cangjie.ContextRelation.CreatedAt.get -> System.DateTimeOffset
+Penghou.Cangjie.ContextRelation.CreatedAt.init -> void
+Penghou.Cangjie.ContextRelation.FromId.get -> System.Guid
+Penghou.Cangjie.ContextRelation.FromId.init -> void
+Penghou.Cangjie.ContextRelation.Kind.get -> string!
+Penghou.Cangjie.ContextRelation.Kind.init -> void
+Penghou.Cangjie.ContextRelation.ToId.get -> System.Guid
+Penghou.Cangjie.ContextRelation.ToId.init -> void
+Penghou.Cangjie.ContextRelationDirection
+Penghou.Cangjie.ContextRelationDirection.Both = 2 -> Penghou.Cangjie.ContextRelationDirection
+Penghou.Cangjie.ContextRelationDirection.Incoming = 1 -> Penghou.Cangjie.ContextRelationDirection
+Penghou.Cangjie.ContextRelationDirection.Outgoing = 0 -> Penghou.Cangjie.ContextRelationDirection
+Penghou.Cangjie.ContextRelationKinds
+Penghou.Cangjie.ContextRelationQuery
+Penghou.Cangjie.ContextRelationQuery.Direction.get -> Penghou.Cangjie.ContextRelationDirection
+Penghou.Cangjie.ContextRelationQuery.Direction.init -> void
+Penghou.Cangjie.ContextRelationQuery.Kinds.get -> System.Collections.Generic.IReadOnlyCollection<string!>?
+Penghou.Cangjie.ContextRelationQuery.Kinds.init -> void
+Penghou.Cangjie.ContextRelationQuery.Limit.get -> int
+Penghou.Cangjie.ContextRelationQuery.Limit.init -> void
+Penghou.Cangjie.ContextSearchHit
+Penghou.Cangjie.ContextSearchHit.Item.get -> Penghou.Cangjie.ContextItem!
+Penghou.Cangjie.ContextSearchHit.Item.init -> void
+Penghou.Cangjie.ContextSearchHit.Rank.get -> int
+Penghou.Cangjie.ContextSearchHit.Rank.init -> void
+Penghou.Cangjie.ContextSearchMode
+Penghou.Cangjie.ContextSearchMode.AllTerms = 0 -> Penghou.Cangjie.ContextSearchMode
+Penghou.Cangjie.ContextSearchMode.AnyTerm = 1 -> Penghou.Cangjie.ContextSearchMode
+Penghou.Cangjie.ContextSearchMode.Phrase = 2 -> Penghou.Cangjie.ContextSearchMode
+Penghou.Cangjie.ContextSource
+Penghou.Cangjie.ContextSource.ContentHash.get -> string?
+Penghou.Cangjie.ContextSource.ContentHash.init -> void
+Penghou.Cangjie.ContextSource.Kind.get -> string?
+Penghou.Cangjie.ContextSource.Kind.init -> void
+Penghou.Cangjie.ContextSource.Uri.get -> string!
+Penghou.Cangjie.ContextSource.Uri.init -> void
+Penghou.Cangjie.ContextStoreConflictException
+Penghou.Cangjie.ContextStoreConflictException.ContextStoreConflictException(string! message) -> void
+Penghou.Cangjie.ContextStoreConflictException.ContextStoreConflictException(string! message, System.Exception! innerException) -> void
+Penghou.Cangjie.ContextStoreRelationExtensions
+Penghou.Cangjie.ContextWriteOptions
+Penghou.Cangjie.ContextWriteOptions.ExpectedRevision.get -> int?
+Penghou.Cangjie.ContextWriteOptions.ExpectedRevision.init -> void
+Penghou.Cangjie.ContextWriteOptions.IdempotencyKey.get -> string?
+Penghou.Cangjie.ContextWriteOptions.IdempotencyKey.init -> void
+Penghou.Cangjie.IContextStore
+Penghou.Cangjie.IContextStore.AddRelationAsync(Penghou.Cangjie.ContextRelation! relation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Cangjie.IContextStore.DeleteAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Cangjie.IContextStore.DeleteExpiredAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<int>
+Penghou.Cangjie.IContextStore.GetAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem?>
+Penghou.Cangjie.IContextStore.GetHistoryByKeyAsync(string! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextItem!>!>
+Penghou.Cangjie.IContextStore.GetLatestByKeyAsync(string! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem?>
+Penghou.Cangjie.IContextStore.GetRelationsAsync(System.Guid id, Penghou.Cangjie.ContextRelationDirection direction = Penghou.Cangjie.ContextRelationDirection.Outgoing, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelation!>!>
+Penghou.Cangjie.IContextStore.QueryRelationsAsync(System.Guid id, Penghou.Cangjie.ContextRelationQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelation!>!>
+Penghou.Cangjie.IContextStore.SearchAsync(Penghou.Cangjie.ContextQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextSearchHit!>!>
+Penghou.Cangjie.IContextStore.StoreAsync(Penghou.Cangjie.ContextItem! item, Penghou.Cangjie.ContextWriteOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem!>
+static Penghou.Cangjie.ContextStoreRelationExtensions.GetRelatedItemsAsync(this Penghou.Cangjie.IContextStore! store, System.Guid id, Penghou.Cangjie.ContextRelationQuery? query = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelatedItem!>!>

@@ -12,14 +12,17 @@ public sealed record ContextItem
     /// <summary>Gets an optional logical identity shared by successive revisions.</summary>
     public string? Key { get; init; }
 
+    /// <summary>Gets the immutable revision number within the exact scope and logical key.</summary>
+    public int Revision { get; init; }
+
     /// <summary>Gets the purpose of the stored context.</summary>
-    public required ContextKind Kind { get; init; }
+    public required string Kind { get; init; }
 
     /// <summary>Gets the searchable textual content.</summary>
     public required string Content { get; init; }
 
-    /// <summary>Gets the optional provenance source.</summary>
-    public ContextSource? Source { get; init; }
+    /// <summary>Gets the origin and producer of this recorded revision.</summary>
+    public required ContextProvenance Provenance { get; init; }
 
     /// <summary>Gets when this revision was first stored.</summary>
     public DateTimeOffset CreatedAt { get; init; }

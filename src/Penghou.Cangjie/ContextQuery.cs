@@ -16,7 +16,7 @@ public sealed record ContextQuery
     public string? SourceUri { get; init; }
 
     /// <summary>Gets optional allowed context kinds.</summary>
-    public IReadOnlyCollection<ContextKind>? Kinds { get; init; }
+    public IReadOnlyCollection<string>? Kinds { get; init; }
 
     /// <summary>Gets tags that must all be present.</summary>
     public IReadOnlyCollection<string>? Tags { get; init; }

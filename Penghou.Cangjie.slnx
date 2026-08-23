@@ -4,6 +4,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Penghou.Cangjie.Sqlite/Penghou.Cangjie.Sqlite.csproj" />
+    <Project Path="src/Penghou.Cangjie.Testing/Penghou.Cangjie.Testing.csproj" />
     <Project Path="src/Penghou.Cangjie/Penghou.Cangjie.csproj" />
   </Folder>
   <Folder Name="/tests/">

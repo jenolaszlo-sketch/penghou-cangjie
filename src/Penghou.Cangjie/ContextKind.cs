@@ -1,16 +1,16 @@
 namespace Penghou.Cangjie;
 
-/// <summary>Classifies the purpose of explicitly stored context.</summary>
-public enum ContextKind
+/// <summary>Provides stable identifiers for common context classifications.</summary>
+public static class ContextKinds
 {
     /// <summary>Raw or near-raw information observed by a system.</summary>
-    Evidence,
+    public const string Evidence = "evidence";
     /// <summary>Reusable information accepted within a scope.</summary>
-    Knowledge,
+    public const string Knowledge = "knowledge";
     /// <summary>A choice made by a workflow or application.</summary>
-    Decision,
+    public const string Decision = "decision";
     /// <summary>A compact representation derived from other context.</summary>
-    Summary,
+    public const string Summary = "summary";
     /// <summary>A reference or description of something produced by a process.</summary>
-    Artifact
+    public const string Artifact = "artifact";
 }

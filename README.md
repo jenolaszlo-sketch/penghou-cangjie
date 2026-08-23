@@ -11,6 +11,7 @@ without requiring an agent framework, vector database, or LLM.
 | --- | --- |
 | `Penghou.Cangjie` | Context, provenance, relation, query, and store abstractions |
 | `Penghou.Cangjie.Sqlite` | Transactional SQLite and FTS5 implementation |
+| `Penghou.Cangjie.Testing` | Reusable `IContextStore` conformance suite |
 
 ## Install
 
@@ -32,11 +33,15 @@ IContextStore store = new SqliteContextStore(new CangjieSqliteOptions
 var evidence = await store.StoreAsync(new ContextItem
 {
     Scope = "repo:my-app",
-    Kind = ContextKind.Evidence,
+    Kind = ContextKinds.Evidence,
     Content = "The gateway references Yarp.ReverseProxy.",
-    Source = new ContextSource
+    Provenance = new ContextProvenance
     {
-        Uri = "repo://src/Gateway/Gateway.csproj"
+        Producer = "solo:research",
+        Source = new ContextSource
+        {
+            Uri = "repo://src/Gateway/Gateway.csproj"
+        }
     },
     Tags = ["gateway", "architecture"]
 });
@@ -75,10 +80,11 @@ await store.AddRelationAsync(new ContextRelation
 ```
 
 Use `GetLatestByKeyAsync` for the current revision and
-`GetHistoryByKeyAsync` for deterministic history. Updating an existing ID is
-supported for correcting mutable storage details, preserves its original
-creation time, and atomically replaces content, source, metadata, tags, and the
-FTS entry.
+`GetHistoryByKeyAsync` for deterministic history. Each physical item is
+immutable. Store a changed logical concept as a new item with the same scope
+and key; Cangjie assigns the next revision and atomically links it to its
+predecessor with `supersedes`. Use `ExpectedRevision` for optimistic concurrency
+and a scoped `IdempotencyKey` for safe ingestion retries.
 
 Relation kinds are persisted as text. Cangjie provides well-known provenance
 kinds while allowing applications and future extension packages to use their
@@ -127,9 +133,19 @@ Application / Agent / Workflow
 
 ## Roadmap
 
+See the [project roadmap](ROADMAP.md) for immutable logical revisions,
+first-class provenance, scoped retrieval, pinned context snapshots, and the
+planned Solo/Zhinu integration proof.
+
 Potential future extension packages include hybrid embedding retrieval and a
 snapshot-aware code graph extracted through Roslyn. These remain separate from
 the small lexical core, and Cangjie will not introduce an LLM dependency.
+
+## Design documents
+
+- [Architecture](docs/architecture.md)
+- [`IContextStore` contract](docs/store-contract.md)
+- [Roadmap](ROADMAP.md)
 
 ## License
 

@@ -3,9 +3,10 @@ namespace Penghou.Cangjie;
 /// <summary>Stores and explicitly retrieves attributable application context.</summary>
 public interface IContextStore
 {
-    /// <summary>Creates or replaces an item atomically and returns its stored representation.</summary>
+    /// <summary>Appends one immutable item revision atomically.</summary>
     ValueTask<ContextItem> StoreAsync(
         ContextItem item,
+        ContextWriteOptions? options = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Gets an item by physical identity, including an expired item.</summary>
@@ -30,7 +31,10 @@ public interface IContextStore
         ContextQuery query,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Physically deletes an item and every relation involving it.</summary>
+    /// <summary>
+    /// Physically deletes a standalone item and every relation involving it.
+    /// Keyed revisions are protected from ordinary deletion.
+    /// </summary>
     ValueTask DeleteAsync(
         Guid id,
         CancellationToken cancellationToken = default);
@@ -47,7 +51,16 @@ public interface IContextStore
             ContextRelationDirection.Outgoing,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Physically deletes every item whose expiration time has passed.</summary>
+    /// <summary>Queries bounded directed relationships with exact kind filters.</summary>
+    ValueTask<IReadOnlyList<ContextRelation>> QueryRelationsAsync(
+        Guid id,
+        ContextRelationQuery query,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Physically deletes expired standalone items. Keyed revisions remain
+    /// retained but hidden from ordinary search.
+    /// </summary>
     ValueTask<int> DeleteExpiredAsync(
         CancellationToken cancellationToken = default);
 }

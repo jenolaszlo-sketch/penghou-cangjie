@@ -1,0 +1,23 @@
+#nullable enable
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions.BusyTimeout.get -> System.TimeSpan
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions.BusyTimeout.set -> void
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions.CangjieSqliteOptions() -> void
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions.DatabasePath.get -> string!
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions.DatabasePath.set -> void
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions.EnableWal.get -> bool
+Penghou.Cangjie.Sqlite.CangjieSqliteOptions.EnableWal.set -> void
+Penghou.Cangjie.Sqlite.ServiceCollectionExtensions
+Penghou.Cangjie.Sqlite.SqliteContextStore
+Penghou.Cangjie.Sqlite.SqliteContextStore.AddRelationAsync(Penghou.Cangjie.ContextRelation! relation, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Cangjie.Sqlite.SqliteContextStore.DeleteAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask
+Penghou.Cangjie.Sqlite.SqliteContextStore.DeleteExpiredAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<int>
+Penghou.Cangjie.Sqlite.SqliteContextStore.GetAsync(System.Guid id, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem?>
+Penghou.Cangjie.Sqlite.SqliteContextStore.GetHistoryByKeyAsync(string! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextItem!>!>
+Penghou.Cangjie.Sqlite.SqliteContextStore.GetLatestByKeyAsync(string! scope, string! key, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem?>
+Penghou.Cangjie.Sqlite.SqliteContextStore.GetRelationsAsync(System.Guid id, Penghou.Cangjie.ContextRelationDirection direction = Penghou.Cangjie.ContextRelationDirection.Outgoing, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelation!>!>
+Penghou.Cangjie.Sqlite.SqliteContextStore.QueryRelationsAsync(System.Guid id, Penghou.Cangjie.ContextRelationQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelation!>!>
+Penghou.Cangjie.Sqlite.SqliteContextStore.SearchAsync(Penghou.Cangjie.ContextQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextSearchHit!>!>
+Penghou.Cangjie.Sqlite.SqliteContextStore.SqliteContextStore(Penghou.Cangjie.Sqlite.CangjieSqliteOptions! options, System.TimeProvider? timeProvider = null) -> void
+Penghou.Cangjie.Sqlite.SqliteContextStore.StoreAsync(Penghou.Cangjie.ContextItem! item, Penghou.Cangjie.ContextWriteOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem!>
+static Penghou.Cangjie.Sqlite.ServiceCollectionExtensions.AddCangjieSqlite(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Penghou.Cangjie.Sqlite.CangjieSqliteOptions!>! configure) -> Microsoft.Extensions.DependencyInjection.IServiceCollection!

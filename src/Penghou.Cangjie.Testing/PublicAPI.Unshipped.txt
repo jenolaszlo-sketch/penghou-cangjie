@@ -1,0 +1,9 @@
+#nullable enable
+Penghou.Cangjie.Testing.ContextStoreConformanceReport
+Penghou.Cangjie.Testing.ContextStoreConformanceReport.CompletedChecks.get -> System.Collections.Generic.IReadOnlyList<string!>!
+Penghou.Cangjie.Testing.ContextStoreConformanceReport.CompletedChecks.init -> void
+Penghou.Cangjie.Testing.ContextStoreConformanceSuite
+Penghou.Cangjie.Testing.IContextStoreFixture
+Penghou.Cangjie.Testing.IContextStoreFixture.CreatePeerStore() -> Penghou.Cangjie.IContextStore!
+Penghou.Cangjie.Testing.IContextStoreFixture.Store.get -> Penghou.Cangjie.IContextStore!
+static Penghou.Cangjie.Testing.ContextStoreConformanceSuite.VerifyAsync(Penghou.Cangjie.Testing.IContextStoreFixture! fixture, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Penghou.Cangjie.Testing.ContextStoreConformanceReport!>!
