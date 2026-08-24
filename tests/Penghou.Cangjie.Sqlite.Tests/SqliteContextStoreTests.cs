@@ -526,6 +526,48 @@ public sealed class SqliteContextStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_DurationIsRecordedForNormalizedEmptyQuery()
+    {
+        var measurements = new List<double>();
+        using var listener = new System.Diagnostics.Metrics.MeterListener();
+        listener.InstrumentPublished = (instrument, meterListener) =>
+        {
+            if (instrument.Meter.Name == CangjieDiagnostics.MeterName &&
+                instrument.Name == CangjieDiagnostics.SearchDurationInstrumentName)
+            {
+                meterListener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<double>(
+            (_, measurement, _, _) => measurements.Add(measurement));
+        listener.Start();
+
+        var results = await CreateStore().SearchAsync(new ContextQuery
+        {
+            Text = "!!!"
+        });
+
+        results.Should().BeEmpty();
+        measurements.Should().ContainSingle()
+            .Which.Should().BeGreaterThanOrEqualTo(0);
+    }
+
+    [Fact]
+    public async Task Health_ReportsActualWalModeAndPropagatesCancellation()
+    {
+        var store = CreateStore();
+        var health = await store.CheckHealthAsync();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var cancelledProbe = () => store.CheckHealthAsync(cancellation.Token).AsTask();
+
+        health.IsHealthy.Should().BeTrue();
+        health.SchemaVersion.Should().Be(4);
+        health.WalMode.Should().BeTrue();
+        await cancelledProbe.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
     public async Task Search_RejectsAmbiguousOrInvalidScopeSets()
     {
         var store = CreateStore();

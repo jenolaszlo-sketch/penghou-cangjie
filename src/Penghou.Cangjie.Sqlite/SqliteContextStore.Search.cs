@@ -12,10 +12,11 @@ public sealed partial class SqliteContextStore
     {
         ValidateQuery(query);
         var started = Stopwatch.GetTimestamp();
+        using var duration = new SearchDurationMeasurement(started);
         var strategy = string.IsNullOrWhiteSpace(query.Text)
             ? ContextSearchStrategies.Exact
             : ContextSearchStrategies.Lexical;
-        using var activity = CangjieDiagnostics.ActivitySource.StartActivity(
+        using var activity = CangjieSqliteDiagnostics.ActivitySource.StartActivity(
             "context.search",
             ActivityKind.Internal);
         SetSearchRequestDiagnostics(activity, query, strategy);
@@ -111,8 +112,6 @@ public sealed partial class SqliteContextStore
             });
         }
         activity?.SetTag("cangjie.search.result_count", results.Count);
-        CangjieDiagnostics.SearchDuration.Record(
-            Stopwatch.GetElapsedTime(started).TotalSeconds);
         return results;
     }
 
@@ -125,7 +124,9 @@ public sealed partial class SqliteContextStore
             return;
 
         activity.SetTag("cangjie.search.strategy", strategy);
-        activity.SetTag("cangjie.search.has_text", query.Text is not null);
+        activity.SetTag(
+            "cangjie.search.has_text",
+            !string.IsNullOrWhiteSpace(query.Text));
         activity.SetTag(
             "cangjie.search.scope_count",
             query.Scopes?.Count ?? (query.Scope is null ? 0 : 1));
@@ -214,5 +215,12 @@ public sealed partial class SqliteContextStore
                      created_at DESC, id ASC
             LIMIT $limit;
             """;
+    }
+
+    private readonly record struct SearchDurationMeasurement(long Started)
+        : IDisposable
+    {
+        public void Dispose() => CangjieSqliteDiagnostics.SearchDuration.Record(
+            Stopwatch.GetElapsedTime(Started).TotalSeconds);
     }
 }

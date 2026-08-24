@@ -1,6 +1,9 @@
 #nullable enable
 const Penghou.Cangjie.CangjieDiagnostics.ActivitySourceName = "Penghou.Cangjie" -> string!
+const Penghou.Cangjie.CangjieDiagnostics.ExpiredDeletedInstrumentName = "cangjie.expired.deleted" -> string!
+const Penghou.Cangjie.CangjieDiagnostics.ItemsStoredInstrumentName = "cangjie.items.stored" -> string!
 const Penghou.Cangjie.CangjieDiagnostics.MeterName = "Penghou.Cangjie" -> string!
+const Penghou.Cangjie.CangjieDiagnostics.SearchDurationInstrumentName = "cangjie.search.duration" -> string!
 const Penghou.Cangjie.ContextKinds.Artifact = "artifact" -> string!
 const Penghou.Cangjie.ContextKinds.Decision = "decision" -> string!
 const Penghou.Cangjie.ContextKinds.Evidence = "evidence" -> string!
@@ -177,9 +180,4 @@ Penghou.Cangjie.IContextStore.ResolveSnapshotAsync(System.Guid id, System.Thread
 Penghou.Cangjie.IContextStore.SearchAsync(Penghou.Cangjie.ContextQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextSearchHit!>!>
 Penghou.Cangjie.IContextStore.StoreAsync(Penghou.Cangjie.ContextItem! item, Penghou.Cangjie.ContextWriteOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextItem!>
 Penghou.Cangjie.IContextStore.StoreSnapshotAsync(Penghou.Cangjie.ContextSnapshot! snapshot, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<Penghou.Cangjie.ContextSnapshot!>
-static Penghou.Cangjie.CangjieDiagnostics.ActivitySource.get -> System.Diagnostics.ActivitySource!
-static Penghou.Cangjie.CangjieDiagnostics.ExpiredDeleted.get -> System.Diagnostics.Metrics.Counter<long>!
-static Penghou.Cangjie.CangjieDiagnostics.ItemsStored.get -> System.Diagnostics.Metrics.Counter<long>!
-static Penghou.Cangjie.CangjieDiagnostics.Meter.get -> System.Diagnostics.Metrics.Meter!
-static Penghou.Cangjie.CangjieDiagnostics.SearchDuration.get -> System.Diagnostics.Metrics.Histogram<double>!
 static Penghou.Cangjie.ContextStoreRelationExtensions.GetRelatedItemsAsync(this Penghou.Cangjie.IContextStore! store, System.Guid id, Penghou.Cangjie.ContextRelationQuery? query = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyList<Penghou.Cangjie.ContextRelatedItem!>!>

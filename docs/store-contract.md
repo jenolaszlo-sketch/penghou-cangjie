@@ -69,10 +69,12 @@ integrity error and must not be silently omitted.
   strategy version. Optional scores are local to that exact strategy/version
   and must not be compared across either boundary.
 
-Search implementations emit `context.search` activities through
-`CangjieDiagnostics.ActivitySource`. Built-in tags contain only strategy,
+Search implementations emit `context.search` activities from the source named
+by `CangjieDiagnostics.ActivitySourceName`. Built-in tags contain only strategy,
 boolean flags, limits, and counts. Query text, context content, scope values,
-logical keys, source URIs, and tag values are not recorded.
+logical keys, source URIs, and tag values are not recorded. Diagnostic sources
+and instruments remain library-owned; consumers subscribe using the published
+source, meter, and instrument-name constants.
 
 ## Retention
 

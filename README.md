@@ -119,10 +119,11 @@ own stable identifiers.
 - Every hit identifies its retrieval strategy and version. Optional scores are
   meaningful only within that exact strategy/version.
 
-Search emits privacy-safe `context.search` activities through
-`CangjieDiagnostics.ActivitySource`. Built-in telemetry contains structural
+Search emits privacy-safe `context.search` activities from the source named by
+`CangjieDiagnostics.ActivitySourceName`. Built-in telemetry contains structural
 counts and flags, never query text, context content, scope names, keys, source
-URIs, or tag values.
+URIs, or tag values. Metric listeners use `CangjieDiagnostics.MeterName` and
+the published instrument-name constants.
 
 ## Immutable snapshots
 

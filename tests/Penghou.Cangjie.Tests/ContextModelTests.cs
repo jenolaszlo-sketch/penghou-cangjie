@@ -26,6 +26,10 @@ public sealed class ContextModelTests
         Assert.Equal("exact", ContextSearchStrategies.Exact);
         Assert.Equal("lexical", ContextSearchStrategies.Lexical);
         Assert.Equal("Penghou.Cangjie", CangjieDiagnostics.ActivitySourceName);
+        Assert.Equal("Penghou.Cangjie", CangjieDiagnostics.MeterName);
+        Assert.Equal(
+            "cangjie.search.duration",
+            CangjieDiagnostics.SearchDurationInstrumentName);
     }
 
     [Fact]

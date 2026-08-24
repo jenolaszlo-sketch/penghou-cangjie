@@ -9,7 +9,6 @@ namespace Penghou.Cangjie.Sqlite;
 /// </summary>
 public sealed partial class SqliteContextStore : IContextStore
 {
-    private readonly CangjieSqliteOptions options;
     private readonly TimeProvider timeProvider;
     private readonly CangjieDatabase database;
 
@@ -24,7 +23,6 @@ public sealed partial class SqliteContextStore : IContextStore
         if (options.BusyTimeout < TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(options));
 
-        this.options = options;
         this.timeProvider = timeProvider ?? TimeProvider.System;
         database = new CangjieDatabase(options);
     }
@@ -33,6 +31,7 @@ public sealed partial class SqliteContextStore : IContextStore
     public async ValueTask<ContextStoreHealth> CheckHealthAsync(
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
             await database.EnsureInitializedAsync(cancellationToken)
@@ -40,15 +39,25 @@ public sealed partial class SqliteContextStore : IContextStore
             await using var connection = await database.OpenAsync(cancellationToken)
                 .ConfigureAwait(false);
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT 1;";
-            await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            command.CommandText = "PRAGMA journal_mode;";
+            var journalMode = Convert.ToString(
+                await command.ExecuteScalarAsync(cancellationToken)
+                    .ConfigureAwait(false),
+                System.Globalization.CultureInfo.InvariantCulture);
             return new ContextStoreHealth
             {
                 IsHealthy = true,
                 StoreName = "sqlite",
                 SchemaVersion = 4,
-                WalMode = options.EnableWal
+                WalMode = string.Equals(
+                    journalMode,
+                    "wal",
+                    StringComparison.OrdinalIgnoreCase)
             };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception exception)
         {

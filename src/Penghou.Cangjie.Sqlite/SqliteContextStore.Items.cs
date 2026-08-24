@@ -145,7 +145,7 @@ public sealed partial class SqliteContextStore
             }
 
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            CangjieDiagnostics.ItemsStored.Add(1);
+            CangjieSqliteDiagnostics.ItemsStored.Add(1);
             return normalized;
         }
         catch (SqliteException exception) when (exception.SqliteErrorCode == 19)
@@ -279,7 +279,7 @@ public sealed partial class SqliteContextStore
             [("$now", now)], cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         if (deleted > 0)
-            CangjieDiagnostics.ExpiredDeleted.Add(deleted);
+            CangjieSqliteDiagnostics.ExpiredDeleted.Add(deleted);
         return deleted;
     }
 
