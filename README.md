@@ -112,6 +112,8 @@ own stable identifiers.
 - All requested tags must be present; tags are normalized to lowercase.
 - Empty `Text` performs indexed filtering without FTS.
 - User text is tokenized and escaped before reaching FTS5.
+- `AllTerms` matches normalized words anywhere in the item; `Phrase` requires
+  one exact contiguous phrase in the supplied order.
 - Equal matches are ordered by creation time descending, then ID ascending.
 - Expired items are hidden from search by default but remain available by ID.
 - `Rank` is the one-based position within the returned result set, not a
@@ -177,10 +179,21 @@ Potential future extension packages include hybrid embedding retrieval and a
 snapshot-aware code graph extracted through Roslyn. These remain separate from
 the small lexical core, and Cangjie will not introduce an LLM dependency.
 
+## Benchmarks
+
+The BenchmarkDotNet suite covers lexical and layered-scope retrieval at 10k and
+100k items, snapshot reconstruction, sequential/concurrent ingestion, and
+expiration sweeps:
+
+```bash
+dotnet run --project benchmarks/Penghou.Cangjie.Benchmarks -c Release -- --filter "*"
+```
+
 ## Design documents
 
 - [Architecture](docs/architecture.md)
 - [`IContextStore` contract](docs/store-contract.md)
+- [Host-triggered maintenance](docs/maintenance.md)
 - [Roadmap](ROADMAP.md)
 
 ## License

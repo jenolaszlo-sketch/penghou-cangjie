@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Penghou.Cangjie.Benchmarks/Penghou.Cangjie.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Penghou.Cangjie.Sample/Penghou.Cangjie.Sample.csproj" />
   </Folder>

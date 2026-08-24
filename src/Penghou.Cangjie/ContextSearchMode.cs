@@ -7,6 +7,9 @@ public enum ContextSearchMode
     AllTerms,
     /// <summary>Requires at least one normalized term.</summary>
     AnyTerm,
-    /// <summary>Requires normalized terms as one phrase in their supplied order.</summary>
+    /// <summary>
+    /// Requires one exact contiguous phrase in supplied term order. Use
+    /// <see cref="AllTerms"/> when terms may appear separately.
+    /// </summary>
     Phrase
 }

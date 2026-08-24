@@ -158,6 +158,27 @@ public sealed class SqliteContextStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_PhraseRequiresContiguousTermsWhileAllTermsDoesNot()
+    {
+        var store = CreateStore();
+        await store.StoreAsync(Item("gateway safely references yarp"));
+
+        var phrase = await store.SearchAsync(new ContextQuery
+        {
+            Text = "gateway references yarp",
+            SearchMode = ContextSearchMode.Phrase
+        });
+        var allTerms = await store.SearchAsync(new ContextQuery
+        {
+            Text = "gateway references yarp",
+            SearchMode = ContextSearchMode.AllTerms
+        });
+
+        phrase.Should().BeEmpty();
+        allTerms.Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task Search_FiltersByExactScopeKindsAndAllTags()
     {
         var store = CreateStore();

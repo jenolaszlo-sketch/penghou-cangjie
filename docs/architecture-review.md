@@ -1,6 +1,6 @@
 # Architecture & quality review — findings
 
-Reviewed: 2026-08, branch `main`, 36 test cases green across 3 test projects
+Reviewed: 2026-08, branch `main`, 39 test cases green across 3 test projects
 (including a Solo+Zhinu cross-repo restart proof). Read-only audit; no code
 changes accompany this document.
 
@@ -19,6 +19,9 @@ baseline casing, and an existing Solo+Zhinu cross-repo restart proof.
 a facade + database owner + capability partials; schema v4 added CHECK
 constraints; metrics and a health probe were added; connection pooling became
 configurable; CI gained a format gate and the repo gained an `.editorconfig`.
+Phrase semantics are now explicit in API and user documentation, host-triggered
+maintenance has a documented recipe, and a BenchmarkDotNet harness covers the
+initial performance-sensitive paths.
 
 ## A. Architecture
 
@@ -39,12 +42,13 @@ replace operation will eventually be required.
 
 ## B. Usability & usefulness
 
-### B1. Phrase search mode joins all terms into one quoted phrase
+### B1. Phrase search mode joins all terms into one quoted phrase — documented
 
 `SafeFtsQueryBuilder.Phrase` produces `"gateway references yarp"` from
 multi-word input, which only matches the exact contiguous phrase. Callers
-expecting "all these words" behavior get surprising empty results. Document the
-semantics prominently or map multi-word phrase input to an AND of terms.
+expecting "all these words" behavior could get surprising empty results. The
+README, XML API documentation, and regression tests now state that phrase mode
+is exact and contiguous and direct callers to `AllTerms` otherwise.
 
 ### B2. No bulk store API
 
@@ -58,18 +62,18 @@ loads.
 on. Consider validating against known kinds at write time (or a closed type)
 once the set stabilizes — free-string kinds make cross-consumer queries fragile.
 
-### B4. No maintenance scheduling hook for expiry
+### B4. Host-triggered expiry maintenance — documented
 
-`DeleteExpiredAsync` physically deletes expired standalone items, but nothing
-calls it — hosts must remember. The Zhinu hosted-service pattern or a
-documented recipe would prevent silent growth. (A health probe and metrics now
-exist; the sweep scheduler itself remains open.)
+`DeleteExpiredAsync` physically deletes expired standalone items. Scheduling is
+intentionally owned by the host or an external system; `docs/maintenance.md`
+now provides hosted-service and one-shot job guidance.
 
-### B5. No benchmarks
+### B5. Benchmark harness added; baselines pending
 
-FTS5 search latency at scale (10k/100k items), snapshot resolution cost, and
-expiry sweep throughput are unmeasured. The Zhinu benchmarks pattern ports
-directly.
+The BenchmarkDotNet project covers FTS5 and layered-scope search at 10k/100k
+items, snapshot resolution, expiry sweeps, and sequential/concurrent ingestion.
+Stable machine baselines should be recorded after a representative CI or
+developer environment is selected.
 
 ## Done well (preserve)
 
@@ -93,7 +97,26 @@ directly.
 
 1. **Refactor follow-through**: when relations/snapshots grow, split their
    public surface off `IContextStore` rather than widening it further.
-2. Add **benchmarks** for FTS search and expiry sweeps at scale.
-3. **Phrase-search semantics**: document prominently or remap to AND-of-terms.
+2. Record and compare **benchmark baselines** on a representative machine.
+3. **Phrase-search semantics**: preserve the now-documented exact behavior.
 4. **Relation removal/replacement** once the knowledge model needs it.
 5. **Kind validation at write time** once the kind set stabilizes.
+
+## Follow-up decisions
+
+- Expiration scheduling belongs to the host or an external scheduler. Cangjie
+  keeps `DeleteExpiredAsync` as the explicit trigger and will document safe
+  hosting patterns rather than run a mandatory background loop.
+- Phrase mode remains exact and contiguous. The API and README should state
+  that clearly; `AllTerms` is the mode for words that may appear separately.
+- Benchmarks should precede retrieval or maintenance optimization.
+- The wide `IContextStore` surface remains acceptable until another store or a
+  real consumer demonstrates a need for capability-specific interfaces.
+- Bulk writes and relation correction/removal need real ingestion and knowledge
+  lifecycle use cases before their atomic and audit semantics are designed.
+- Extensible string kinds are intentional. Do not close the vocabulary merely
+  for validation convenience; revisit only if interoperability evidence shows
+  that namespacing and constants are insufficient.
+- The next product-level validation is real Solo dogfooding. The current
+  integration test proves persistence boundaries but does not replace normal
+  authoring experience in Solo.
