@@ -27,17 +27,34 @@ jobs:
       - name: Pack
         shell: bash
         run: |
-          args=()
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            args+=(--property:PackageVersion="${GITHUB_REF_NAME#v}")
+            package_version="${GITHUB_REF_NAME#v}"
+          else
+            package_version="$(dotnet msbuild \
+              src/Penghou.Cangjie/Penghou.Cangjie.csproj \
+              -getProperty:PackageVersion)"
           fi
+
+          package_ids=(
+            Penghou.Cangjie
+            Penghou.Cangjie.Sqlite
+            Penghou.Cangjie.Testing
+          )
+
           for csproj in \
             src/Penghou.Cangjie/Penghou.Cangjie.csproj \
-            src/Penghou.Cangjie.Sqlite/Penghou.Cangjie.Sqlite.csproj; do
+            src/Penghou.Cangjie.Sqlite/Penghou.Cangjie.Sqlite.csproj \
+            src/Penghou.Cangjie.Testing/Penghou.Cangjie.Testing.csproj; do
             dotnet pack "$csproj" \
               --configuration Release \
               --output ./artifacts \
-              "${args[@]}"
+              --property:Version="$package_version" \
+              --property:PackageVersion="$package_version"
+          done
+
+          for package_id in "${package_ids[@]}"; do
+            test -f "./artifacts/$package_id.$package_version.nupkg"
+            test -f "./artifacts/$package_id.$package_version.snupkg"
           done
 
       - name: NuGet login (OIDC -> temp API key)
