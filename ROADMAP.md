@@ -392,6 +392,23 @@ Acceptance criteria:
 Stop after this phase and dogfood the design before adding richer memory
 behavior.
 
+## Phase C9 — Dogfooding write ergonomics
+
+Status: complete. Guyabano's repository-context integration exposed two
+provider-neutral persistence gaps, now covered by the core contract, SQLite
+implementation, and reusable store conformance suite.
+
+- Ordered `StoreBatchAsync` writes are transactional: either every new item is
+  committed or none is.
+- Per-item optimistic concurrency and scoped idempotency retain their normal
+  semantics inside a batch.
+- Caller-identified snapshots support equivalent retries without a
+  read-before-create race.
+- Reusing a snapshot ID for a different selection remains an explicit conflict.
+
+Rendering, prompt disclosure, repository identity, and selection policy remain
+application responsibilities rather than Cangjie concepts.
+
 ## Later, evidence-driven work
 
 ### Conversation reference resolution support

@@ -18,135 +18,18 @@ public sealed partial class SqliteContextStore
         ValidateItem(item);
         ValidateWriteOptions(item, options);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
-        var id = item.Id == Guid.Empty ? Guid.NewGuid() : item.Id;
-        var normalizedTags = NormalizeTags(item.Tags);
-        var normalizedMetadata = new Dictionary<string, string>(
-            item.Metadata,
-            StringComparer.Ordinal);
-        var requestHash = ComputeRequestHash(
-            item with
-            {
-                Id = Guid.Empty,
-                Revision = 0,
-                Kind = item.Kind.Trim(),
-                CreatedAt = default,
-                ExpiresAt = item.ExpiresAt?.ToUniversalTime(),
-                Provenance = item.Provenance with
-                {
-                    OriginatedAt = item.Provenance.OriginatedAt?.ToUniversalTime(),
-                    Attributes = new Dictionary<string, string>(
-                        item.Provenance.Attributes,
-                        StringComparer.Ordinal)
-                },
-                Tags = normalizedTags,
-                Metadata = normalizedMetadata
-            });
         await using var connection = await OpenAsync(cancellationToken)
             .ConfigureAwait(false);
         await using var transaction = connection.BeginTransaction(deferred: false);
         try
         {
-            if (options?.IdempotencyKey is not null)
-            {
-                var existing = await ReadByIdempotencyKeyAsync(
-                    connection,
-                    transaction,
-                    item.Scope,
-                    options.IdempotencyKey,
-                    cancellationToken).ConfigureAwait(false);
-                if (existing is not null)
-                {
-                    if (string.Equals(
-                        existing.Value.RequestHash,
-                        requestHash,
-                        StringComparison.Ordinal))
-                    {
-                        return existing.Value.Item;
-                    }
-
-                    throw new ContextStoreConflictException(
-                        $"Idempotency key '{options.IdempotencyKey}' is already associated with different context in scope '{item.Scope}'.");
-                }
-            }
-
-            if (await ItemExistsAsync(connection, transaction, id, cancellationToken)
-                .ConfigureAwait(false))
-            {
-                throw new ContextStoreConflictException(
-                    $"Context item '{id:D}' already exists and immutable revisions cannot be overwritten.");
-            }
-
-            var current = item.Key is null
-                ? null
-                : await ReadCurrentRevisionAsync(
-                    connection,
-                    transaction,
-                    item.Scope,
-                    item.Key,
-                    cancellationToken).ConfigureAwait(false);
-            var actualRevision = current?.Revision ?? 0;
-            if (options?.ExpectedRevision is int expectedRevision &&
-                expectedRevision != actualRevision)
-            {
-                throw new ContextStoreConflictException(
-                    $"Expected revision {expectedRevision} for '{item.Scope}/{item.Key}', but current revision is {actualRevision}.");
-            }
-
-            var normalized = item with
-            {
-                Id = id,
-                Revision = item.Key is null ? 1 : actualRevision + 1,
-                Kind = item.Kind.Trim(),
-                CreatedAt = item.CreatedAt == default
-                    ? timeProvider.GetUtcNow()
-                    : item.CreatedAt.ToUniversalTime(),
-                ExpiresAt = item.ExpiresAt?.ToUniversalTime(),
-                Provenance = item.Provenance with
-                {
-                    OriginatedAt = item.Provenance.OriginatedAt?.ToUniversalTime(),
-                    Attributes = new Dictionary<string, string>(
-                        item.Provenance.Attributes,
-                        StringComparer.Ordinal)
-                },
-                Tags = normalizedTags,
-                Metadata = normalizedMetadata
-            };
-
-            await InsertItemAsync(
-                connection,
-                transaction,
-                normalized,
-                options?.IdempotencyKey,
-                requestHash,
-                cancellationToken).ConfigureAwait(false);
-            await ReplaceTagsAsync(
-                connection,
-                transaction,
-                normalized,
-                cancellationToken).ConfigureAwait(false);
-            await ReplaceFtsAsync(
-                connection,
-                transaction,
-                normalized,
-                cancellationToken).ConfigureAwait(false);
-            if (current is not null)
-            {
-                await InsertRelationAsync(
-                    connection,
-                    transaction,
-                    new ContextRelation
-                    {
-                        FromId = normalized.Id,
-                        ToId = current.Value.Id,
-                        Kind = ContextRelationKinds.Supersedes,
-                        CreatedAt = normalized.CreatedAt
-                    },
-                    cancellationToken).ConfigureAwait(false);
-            }
-
+            var result = await StoreInTransactionAsync(
+                connection, transaction, item, options, cancellationToken)
+                .ConfigureAwait(false);
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            CangjieSqliteDiagnostics.ItemsStored.Add(1);
-            return normalized;
+            if (result.Inserted)
+                CangjieSqliteDiagnostics.ItemsStored.Add(1);
+            return result.Item;
         }
         catch (SqliteException exception) when (exception.SqliteErrorCode == 19)
         {
@@ -154,6 +37,174 @@ public sealed partial class SqliteContextStore
                 "The context append conflicted with another committed write.",
                 exception);
         }
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyList<ContextItem>> StoreBatchAsync(
+        IReadOnlyList<ContextWriteRequest> requests,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(requests);
+        if (requests.Count == 0)
+            throw new ArgumentException("A context write batch must not be empty.", nameof(requests));
+        foreach (var request in requests)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+            ValidateItem(request.Item);
+            ValidateWriteOptions(request.Item, request.Options);
+        }
+
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await OpenAsync(cancellationToken)
+            .ConfigureAwait(false);
+        await using var transaction = connection.BeginTransaction(deferred: false);
+        try
+        {
+            var results = new List<ContextItem>(requests.Count);
+            var inserted = 0;
+            foreach (var request in requests)
+            {
+                var result = await StoreInTransactionAsync(
+                    connection,
+                    transaction,
+                    request.Item,
+                    request.Options,
+                    cancellationToken).ConfigureAwait(false);
+                results.Add(result.Item);
+                if (result.Inserted)
+                    inserted++;
+            }
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            if (inserted > 0)
+                CangjieSqliteDiagnostics.ItemsStored.Add(inserted);
+            return results;
+        }
+        catch (SqliteException exception) when (exception.SqliteErrorCode == 19)
+        {
+            throw new ContextStoreConflictException(
+                "The context append batch conflicted with another committed write.",
+                exception);
+        }
+    }
+
+    private async ValueTask<(ContextItem Item, bool Inserted)> StoreInTransactionAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        ContextItem item,
+        ContextWriteOptions? options,
+        CancellationToken cancellationToken)
+    {
+        var id = item.Id == Guid.Empty ? Guid.NewGuid() : item.Id;
+        var normalizedTags = NormalizeTags(item.Tags);
+        var normalizedMetadata = new Dictionary<string, string>(
+            item.Metadata,
+            StringComparer.Ordinal);
+        var canonicalRequest = item with
+        {
+            Id = Guid.Empty,
+            Revision = 0,
+            Kind = item.Kind.Trim(),
+            CreatedAt = default,
+            ExpiresAt = item.ExpiresAt?.ToUniversalTime(),
+            Provenance = item.Provenance with
+            {
+                OriginatedAt = item.Provenance.OriginatedAt?.ToUniversalTime(),
+                Attributes = new Dictionary<string, string>(
+                    item.Provenance.Attributes,
+                    StringComparer.Ordinal)
+            },
+            Tags = normalizedTags,
+            Metadata = normalizedMetadata
+        };
+        var requestHash = ComputeRequestHash(canonicalRequest);
+        if (options?.IdempotencyKey is not null)
+        {
+            var existing = await ReadByIdempotencyKeyAsync(
+                connection,
+                transaction,
+                item.Scope,
+                options.IdempotencyKey,
+                cancellationToken).ConfigureAwait(false);
+            if (existing is not null)
+            {
+                if (string.Equals(
+                    existing.Value.RequestHash,
+                    requestHash,
+                    StringComparison.Ordinal))
+                {
+                    return (existing.Value.Item, false);
+                }
+
+                throw new ContextStoreConflictException(
+                    $"Idempotency key '{options.IdempotencyKey}' is already associated with different context in scope '{item.Scope}'.");
+            }
+        }
+
+        if (await ItemExistsAsync(connection, transaction, id, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            throw new ContextStoreConflictException(
+                $"Context item '{id:D}' already exists and immutable revisions cannot be overwritten.");
+        }
+
+        var current = item.Key is null
+            ? null
+            : await ReadCurrentRevisionAsync(
+                connection,
+                transaction,
+                item.Scope,
+                item.Key,
+                cancellationToken).ConfigureAwait(false);
+        var actualRevision = current?.Revision ?? 0;
+        if (options?.ExpectedRevision is int expectedRevision &&
+            expectedRevision != actualRevision)
+        {
+            throw new ContextStoreConflictException(
+                $"Expected revision {expectedRevision} for '{item.Scope}/{item.Key}', but current revision is {actualRevision}.");
+        }
+
+        var normalized = canonicalRequest with
+        {
+            Id = id,
+            Revision = item.Key is null ? 1 : actualRevision + 1,
+            CreatedAt = item.CreatedAt == default
+                ? timeProvider.GetUtcNow()
+                : item.CreatedAt.ToUniversalTime()
+        };
+        await InsertItemAsync(
+            connection,
+            transaction,
+            normalized,
+            options?.IdempotencyKey,
+            requestHash,
+            cancellationToken).ConfigureAwait(false);
+        await ReplaceTagsAsync(
+            connection,
+            transaction,
+            normalized,
+            cancellationToken).ConfigureAwait(false);
+        await ReplaceFtsAsync(
+            connection,
+            transaction,
+            normalized,
+            cancellationToken).ConfigureAwait(false);
+        if (current is not null)
+        {
+            await InsertRelationAsync(
+                connection,
+                transaction,
+                new ContextRelation
+                {
+                    FromId = normalized.Id,
+                    ToId = current.Value.Id,
+                    Kind = ContextRelationKinds.Supersedes,
+                    CreatedAt = normalized.CreatedAt
+                },
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return (normalized, true);
     }
 
     /// <inheritdoc />

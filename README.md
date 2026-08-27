@@ -18,7 +18,7 @@ restart.
 ## Install
 
 ```bash
-dotnet add package Penghou.Cangjie.Sqlite --version 0.1.0-preview.2
+dotnet add package Penghou.Cangjie.Sqlite --version 0.1.0-preview.3
 ```
 
 ## Quick start
@@ -100,6 +100,33 @@ and key; Cangjie assigns the next revision and atomically links it to its
 predecessor with `supersedes`. Use `ExpectedRevision` for optimistic concurrency
 and a scoped `IdempotencyKey` for safe ingestion retries.
 
+Use `StoreBatchAsync` when a selected group of observations must become visible
+together. Requests execute in order, so multiple revisions of one logical key
+can use successive `ExpectedRevision` values. A conflict rolls back every new
+item in the batch:
+
+```csharp
+var observations = await store.StoreBatchAsync(
+[
+    new ContextWriteRequest
+    {
+        Item = gatewayEvidence,
+        Options = new ContextWriteOptions
+        {
+            IdempotencyKey = "index:42:gateway"
+        }
+    },
+    new ContextWriteRequest
+    {
+        Item = routingEvidence,
+        Options = new ContextWriteOptions
+        {
+            IdempotencyKey = "index:42:routing"
+        }
+    }
+]);
+```
+
 Relation kinds are persisted as text. Cangjie provides well-known provenance
 kinds while allowing applications and future extension packages to use their
 own stable identifiers.
@@ -134,6 +161,10 @@ strategy/version, selection time, purpose, and optional metadata. It does not
 duplicate context payloads. Snapshot creation is atomic, references pin their
 items against ordinary deletion and expiration cleanup, and
 `ResolveSnapshotAsync` reconstructs the exact historical selection in order.
+When a caller supplies `ContextSnapshot.Id`, retrying the same selection returns
+the originally stored snapshot (including its original selection time). Reusing
+that ID for different items or selection metadata fails explicitly, so hosts do
+not need a racy read-before-create sequence.
 
 ## What Cangjie is not
 

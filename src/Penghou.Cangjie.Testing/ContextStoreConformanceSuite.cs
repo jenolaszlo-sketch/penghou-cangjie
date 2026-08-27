@@ -101,6 +101,60 @@ public static class ContextStoreConformanceSuite
             "idempotency.conflicting-reuse").ConfigureAwait(false);
         checks.Add("scoped-idempotency");
 
+        const string batchKey = "decision:batch";
+        var batch = await store.StoreBatchAsync(
+        [
+            new ContextWriteRequest
+            {
+                Item = Item(scope, "batch revision one", ContextKinds.Decision) with
+                {
+                    Key = batchKey
+                },
+                Options = new ContextWriteOptions { ExpectedRevision = 0 }
+            },
+            new ContextWriteRequest
+            {
+                Item = Item(scope, "batch revision two", ContextKinds.Decision) with
+                {
+                    Key = batchKey
+                },
+                Options = new ContextWriteOptions { ExpectedRevision = 1 }
+            }
+        ],
+            cancellationToken).ConfigureAwait(false);
+        Require(
+            batch.Count == 2 && batch[0].Revision == 1 && batch[1].Revision == 2,
+            "batch.ordered-revisions");
+        const string rollbackContent = "atomic rollback sentinel";
+        await RequireConflictAsync(
+            () => store.StoreBatchAsync(
+            [
+                new ContextWriteRequest
+                {
+                    Item = Item(scope, rollbackContent, ContextKinds.Evidence)
+                },
+                new ContextWriteRequest
+                {
+                    Item = Item(scope, "stale batch", ContextKinds.Decision) with
+                    {
+                        Key = batchKey
+                    },
+                    Options = new ContextWriteOptions { ExpectedRevision = 1 }
+                }
+            ],
+                cancellationToken).AsTask(),
+            "batch.atomic-conflict").ConfigureAwait(false);
+        var rolledBack = await peer.SearchAsync(
+            new ContextQuery
+            {
+                Scope = scope,
+                Text = rollbackContent,
+                SearchMode = ContextSearchMode.Phrase
+            },
+            cancellationToken).ConfigureAwait(false);
+        Require(rolledBack.Count == 0, "batch.atomic-rollback");
+        checks.Add("atomic-batch-writes");
+
         var related = await store.StoreAsync(
             Item(scope, "related", ContextKinds.Knowledge),
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -212,16 +266,30 @@ public static class ContextStoreConformanceSuite
             "search.ordered-scopes");
         checks.Add("scoped-retrieval");
 
+        var snapshotRequest = new ContextSnapshot
+        {
+            Id = Guid.NewGuid(),
+            ItemIds = [second.Id, first.Id],
+            QueryIdentity = "conformance:revision-history",
+            Strategy = ContextSearchStrategies.Exact,
+            StrategyVersion = "conformance-v1",
+            Purpose = "restart proof"
+        };
         var snapshot = await store.StoreSnapshotAsync(
-            new ContextSnapshot
-            {
-                ItemIds = [second.Id, first.Id],
-                QueryIdentity = "conformance:revision-history",
-                Strategy = ContextSearchStrategies.Exact,
-                StrategyVersion = "conformance-v1",
-                Purpose = "restart proof"
-            },
+            snapshotRequest,
             cancellationToken).ConfigureAwait(false);
+        var snapshotRetry = await peer.StoreSnapshotAsync(
+            snapshotRequest,
+            cancellationToken).ConfigureAwait(false);
+        Require(Equivalent(snapshotRetry, snapshot), "snapshot.equivalent-retry");
+        await RequireConflictAsync(
+            () => store.StoreSnapshotAsync(
+                snapshotRequest with
+                {
+                    StrategyVersion = "conflicting-version"
+                },
+                cancellationToken).AsTask(),
+            "snapshot.conflicting-identity-reuse").ConfigureAwait(false);
         var resolvedSnapshot = await peer.ResolveSnapshotAsync(
             snapshot.Id,
             cancellationToken).ConfigureAwait(false);
@@ -280,6 +348,13 @@ public static class ContextStoreConformanceSuite
     }
 
     private static bool Equivalent(ContextItem? left, ContextItem right) =>
+        left is not null &&
+        string.Equals(
+            JsonSerializer.Serialize(left),
+            JsonSerializer.Serialize(right),
+            StringComparison.Ordinal);
+
+    private static bool Equivalent(ContextSnapshot? left, ContextSnapshot right) =>
         left is not null &&
         string.Equals(
             JsonSerializer.Serialize(left),

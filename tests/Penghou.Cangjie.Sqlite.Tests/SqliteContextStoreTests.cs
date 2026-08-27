@@ -73,6 +73,7 @@ public sealed class SqliteContextStoreTests : IDisposable
             "immutable-revisions",
             "write-conflicts",
             "scoped-idempotency",
+            "atomic-batch-writes",
             "relation-persistence",
             "scoped-retrieval",
             "immutable-snapshots");
@@ -298,6 +299,52 @@ public sealed class SqliteContextStoreTests : IDisposable
             .WithMessage("*already associated with different context*");
         (await store.SearchAsync(new ContextQuery { Scope = "test" }))
             .Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task StoreBatch_AppendsInOrderAndAssignsSequentialRevisions()
+    {
+        var store = CreateStore();
+
+        var stored = await store.StoreBatchAsync(
+        [
+            new ContextWriteRequest
+            {
+                Item = Item("Version one") with { Key = "decision:batch" },
+                Options = new ContextWriteOptions { ExpectedRevision = 0 }
+            },
+            new ContextWriteRequest
+            {
+                Item = Item("Version two") with { Key = "decision:batch" },
+                Options = new ContextWriteOptions { ExpectedRevision = 1 }
+            }
+        ]);
+
+        stored.Select(item => item.Revision).Should().Equal(1, 2);
+        (await store.GetHistoryByKeyAsync("test", "decision:batch"))
+            .Select(item => item.Id).Should().Equal(stored[1].Id, stored[0].Id);
+    }
+
+    [Fact]
+    public async Task StoreBatch_ConflictRollsBackEveryNewItem()
+    {
+        var store = CreateStore();
+        var operation = () => store.StoreBatchAsync(
+        [
+            new ContextWriteRequest { Item = Item("must roll back") },
+            new ContextWriteRequest
+            {
+                Item = Item("stale revision") with { Key = "decision:stale" },
+                Options = new ContextWriteOptions { ExpectedRevision = 4 }
+            }
+        ]).AsTask();
+
+        await operation.Should().ThrowAsync<ContextStoreConflictException>();
+        (await store.SearchAsync(new ContextQuery
+        {
+            Scope = "test",
+            Text = "must roll back"
+        })).Should().BeEmpty();
     }
 
     [Fact]
@@ -656,6 +703,34 @@ public sealed class SqliteContextStoreTests : IDisposable
 
         await operation.Should().ThrowAsync<ContextStoreConflictException>();
         (await store.GetSnapshotAsync(snapshotId)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Snapshots_EquivalentIdentifiedRetryReturnsOriginal()
+    {
+        var store = CreateStore();
+        var item = await store.StoreAsync(Item("selected"));
+        var request = new ContextSnapshot
+        {
+            Id = Guid.NewGuid(),
+            ItemIds = [item.Id],
+            QueryIdentity = "query:retry",
+            Strategy = ContextSearchStrategies.Exact,
+            StrategyVersion = "test-v1",
+            Metadata = new Dictionary<string, string> { ["run"] = "17" }
+        };
+
+        var first = await store.StoreSnapshotAsync(request);
+        clock.Advance(TimeSpan.FromMinutes(1));
+        var retry = await store.StoreSnapshotAsync(request);
+        var conflict = () => store.StoreSnapshotAsync(request with
+        {
+            StrategyVersion = "different"
+        }).AsTask();
+
+        retry.Should().BeEquivalentTo(first);
+        await conflict.Should().ThrowAsync<ContextStoreConflictException>()
+            .WithMessage("*different selection*");
     }
 
     [Fact]

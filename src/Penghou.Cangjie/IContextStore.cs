@@ -9,6 +9,14 @@ public interface IContextStore
         ContextWriteOptions? options = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Appends an ordered batch atomically. Either every request succeeds or
+    /// no new item in the batch is committed.
+    /// </summary>
+    ValueTask<IReadOnlyList<ContextItem>> StoreBatchAsync(
+        IReadOnlyList<ContextWriteRequest> requests,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Gets an item by physical identity, including an expired item.</summary>
     ValueTask<ContextItem?> GetAsync(
         Guid id,
@@ -31,7 +39,11 @@ public interface IContextStore
         ContextQuery query,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Atomically stores an immutable snapshot and pins its items.</summary>
+    /// <summary>
+    /// Atomically stores an immutable snapshot and pins its items. Retrying an
+    /// equivalent caller-identified snapshot returns the original snapshot;
+    /// conflicting identity reuse fails explicitly.
+    /// </summary>
     ValueTask<ContextSnapshot> StoreSnapshotAsync(ContextSnapshot snapshot,
         CancellationToken cancellationToken = default);
 

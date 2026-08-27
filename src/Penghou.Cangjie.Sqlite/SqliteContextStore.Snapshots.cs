@@ -27,6 +27,26 @@ public sealed partial class SqliteContextStore
         };
         try
         {
+            if (snapshot.Id != Guid.Empty)
+            {
+                var existing = await ReadSnapshotAsync(
+                    connection,
+                    snapshot.Id,
+                    cancellationToken,
+                    transaction).ConfigureAwait(false);
+                if (existing is not null)
+                {
+                    if (!IsEquivalentRetry(existing, snapshot))
+                    {
+                        throw new ContextStoreConflictException(
+                            $"Snapshot ID '{snapshot.Id:D}' is already associated with a different selection.");
+                    }
+
+                    await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+                    return existing;
+                }
+            }
+
             await ExecuteAsync(connection, transaction, """
                 INSERT INTO context_snapshots
                     (id, query_identity, strategy, strategy_version, selected_at, purpose, metadata_json)
@@ -100,7 +120,8 @@ public sealed partial class SqliteContextStore
     private static async Task<ContextSnapshot?> ReadSnapshotAsync(
         SqliteConnection connection,
         Guid id,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        SqliteTransaction? transaction = null)
     {
         string queryIdentity;
         string strategy;
@@ -114,9 +135,10 @@ public sealed partial class SqliteContextStore
             FROM context_snapshots
             WHERE id = $id;
             """, [("$id", id.ToString("D"))]))
-        await using (var reader = await command.ExecuteReaderAsync(cancellationToken)
-            .ConfigureAwait(false))
         {
+            command.Transaction = transaction;
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken)
+                .ConfigureAwait(false);
             if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                 return null;
             queryIdentity = reader.GetString(0);
@@ -131,6 +153,7 @@ public sealed partial class SqliteContextStore
             SELECT item_id FROM context_snapshot_items
             WHERE snapshot_id = $id ORDER BY ordinal ASC;
             """, [("$id", id.ToString("D"))]);
+        itemCommand.Transaction = transaction;
         await using var itemReader = await itemCommand.ExecuteReaderAsync(cancellationToken)
             .ConfigureAwait(false);
         var itemIds = new List<Guid>();
@@ -148,6 +171,22 @@ public sealed partial class SqliteContextStore
             Metadata = metadata
         };
     }
+
+    private static bool IsEquivalentRetry(
+        ContextSnapshot existing,
+        ContextSnapshot request) =>
+        existing.Id == request.Id &&
+        existing.ItemIds.SequenceEqual(request.ItemIds) &&
+        string.Equals(existing.QueryIdentity, request.QueryIdentity, StringComparison.Ordinal) &&
+        string.Equals(existing.Strategy, request.Strategy, StringComparison.Ordinal) &&
+        string.Equals(existing.StrategyVersion, request.StrategyVersion, StringComparison.Ordinal) &&
+        string.Equals(existing.Purpose, request.Purpose, StringComparison.Ordinal) &&
+        (request.SelectedAt == default ||
+            existing.SelectedAt == request.SelectedAt.ToUniversalTime()) &&
+        existing.Metadata.Count == request.Metadata.Count &&
+        existing.Metadata.All(pair =>
+            request.Metadata.TryGetValue(pair.Key, out var value) &&
+            string.Equals(pair.Value, value, StringComparison.Ordinal));
 
     private static void ValidateSnapshot(ContextSnapshot snapshot)
     {
