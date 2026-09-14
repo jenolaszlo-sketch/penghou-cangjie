@@ -2,9 +2,9 @@
 
 ## Objective
 
-Prepare Penghou.Cangjie to become the durable context and memory substrate for
-Solo without coupling the core library to Solo, coding agents, Zhinu, Baize, or
-any model provider.
+Prepare Penghou.Cangjie to become a durable working-context and shared-cognition
+substrate for long-running Penghou workflows without coupling the core library
+to Guyabano/Solo, coding agents, Zhinu, Baize, or any model provider.
 
 ```text
 Solo
@@ -19,8 +19,8 @@ Solo
 
 Cangjie answers:
 
-> What do we know, where did it come from, how has it changed, how is it
-> related, and what is relevant now?
+> What has been retained, who asserted or observed it, where did it come from,
+> how has it changed, how is it related, and what may be relevant now?
 
 Zhinu answers what executed and what should execute next. Solo interprets the
 knowledge and conversation in the software-engineering domain. Baize
@@ -38,8 +38,11 @@ communicates with the selected model.
   dependencies, or implement replay.
 - Zhinu and Solo should retain stable Cangjie references instead of copying
   complete payloads into workflow state.
-- Local-first SQLite remains the initial persistence model. Distributed and
-  cloud architectures are out of scope until demand exists.
+- Persistence remains provider-neutral. SQLite is the proven initial authority;
+  LatticeDbSharp is the target first graph-capable provider, but replaces
+  SQLite only after restart, replay, corruption, query-equivalence, and package
+  isolation gates pass. Distributed and cloud architectures remain out of
+  scope until demand exists.
 
 ## Core semantic laws
 
@@ -409,7 +412,83 @@ implementation, and reusable store conformance suite.
 Rendering, prompt disclosure, repository identity, and selection policy remain
 application responsibilities rather than Cangjie concepts.
 
+## Marang Gate 0.5 — Capability baseline
+
+The initial Gate 0.5 foundation is usable: stable logical revisions,
+immutable ordered snapshots, `ExpectedRevision` and idempotent retries,
+bounded lexical search with strategy-aware ranking, retention/pinning guards,
+and portable snapshot IDs are implemented. Marang can place snapshot
+references in `SupervisorContextPackage` without copying Cangjie payloads.
+
+The detailed evidence matrix, adapter boundary, and prioritized upstream work
+are recorded in [`docs/marang-gate-0.5.md`](docs/marang-gate-0.5.md). The main
+follow-ups are a snapshot-level canonical hash/provenance envelope, resource
+size bounds and paged retrieval, optional structured correlation/indexing, and
+sensitive-data classification/redaction/encryption/tenant policy. True as-of
+retrieval remains later work because immutable snapshots already provide the
+initial reproducibility guarantee.
+
 ## Later, evidence-driven work
+
+### Phase C10 — Attributed working-memory semantics
+
+Evolve Cangjie from generic retained context into an explicitly attributed
+shared cognitive workspace without treating model-authored content as fact.
+
+- [ ] Define bounded diary-entry profiles for observations, assumptions,
+  hypotheses, concerns, constraints, questions, decisions, and suggestions.
+- [ ] Bind each entry to opaque run/workflow/activity, actor, model/version,
+  role/profile, scope, occurrence time, producer, and evidence references where
+  supplied. Keep application identity vocabularies outside core.
+- [ ] Make epistemic status and source strength explicit and extensible; avoid
+  a universal confidence score.
+- [ ] Add first-class `supports`, `contradicts`, `refines`, `invalidates`,
+  `answers`, `depends-on`, `derived-from`, and `supersedes` relationships while
+  retaining immutable physical revisions.
+- [ ] Specify that memory payloads are untrusted context, never workflow
+  instructions, capability grants, approvals, or control-plane authority.
+
+### Phase C11 — LatticeDbSharp graph-provider proof
+
+Graph relationships are part of Cangjie's portable memory semantics; native
+LatticeDB identities and query syntax are not. Introduce an optional provider
+and prove it before changing the default store.
+
+- [ ] Define a versioned mapping for entries, revisions, relationships,
+  snapshots, provenance, scopes, retention state, and provider checkpoints.
+- [ ] Implement exact/scoped lookup, relationship traversal, lexical search,
+  and optional vector/hybrid capabilities with typed unsupported results.
+- [ ] Preserve stable Cangjie IDs and canonical payloads independently of
+  native node/edge IDs.
+- [ ] Prove idempotent replay, optimistic concurrency, multi-writer behavior,
+  process restart, delete/rebuild, corruption detection, and deterministic
+  result bounds on every supported native platform.
+- [ ] Compare SQLite and LatticeDB results through the store conformance suite.
+  Retire SQLite as the primary architecture only after parity and operational
+  recovery are demonstrated; no distributed dual-write is introduced.
+
+### Phase C12 — Purpose-specific context compilation
+
+- [ ] Add bounded activity, checkpoint, planning, and review context requests;
+  scopes and external identities remain opaque caller inputs.
+- [ ] Make checkpoint context delta-oriented from an explicit prior snapshot or
+  cursor instead of repeatedly returning full workflow memory.
+- [ ] Return an immutable context snapshot plus selection policy/version,
+  truncation, diagnostics, and evidence/provenance references.
+- [ ] Track retrieval, inclusion, expansion, citation, decision use,
+  contradiction, validation, and replan outcomes as external evidence signals;
+  do not let Cangjie infer causal usefulness from retrieval alone.
+
+### Phase C13 — Retention, compression, and knowledge-promotion seam
+
+- [ ] Define retrieval states such as hot, warm, compressed, cold, and
+  purgeable separately from administrative/privacy deletion.
+- [ ] Preserve pinned revisions and provenance when creating deterministic
+  compression or summary derivations.
+- [ ] Define a provider-neutral promotion-candidate export for semantic and
+  procedural knowledge, including supporting/contradicting evidence, temporal
+  validity, and supersession. Do not create a long-term-knowledge repository or
+  automatically promote diary entries yet.
 
 ### Conversation reference resolution support
 
@@ -427,7 +506,8 @@ replay.
 ### Optional retrieval extensions
 
 Embedding, hybrid, code-graph, or provider-specific retrieval belongs in
-optional packages after lexical retrieval and real Solo usage reveal a need.
+optional packages. LatticeDbSharp is the first graph-provider target, while
+embedding generation remains host-supplied and optional.
 
 ## Explicit non-goals for the initial foundation
 
