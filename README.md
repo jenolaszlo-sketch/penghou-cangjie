@@ -1,5 +1,9 @@
 # Penghou.Cangjie
 
+[![NuGet](https://img.shields.io/nuget/v/Penghou.Cangjie)](https://www.nuget.org/packages/Penghou.Cangjie)
+[![CI](https://github.com/jenolaszlo-sketch/penghou-cangjie/actions/workflows/ci.yml/badge.svg)](https://github.com/jenolaszlo-sketch/penghou-cangjie/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/jenolaszlo-sketch/penghou-cangjie)](LICENSE)
+
 Penghou.Cangjie is a lightweight, local-first, provenance-aware context store
 for .NET AI applications. It provides explicit persistent context, SQLite FTS5
 retrieval, scopes, tags, relationships, logical history, and evidence tracking
@@ -210,6 +214,14 @@ Potential future extension packages include hybrid embedding retrieval and a
 snapshot-aware code graph extracted through Roslyn. These remain separate from
 the small lexical core, and Cangjie will not introduce an LLM dependency.
 
+The next memory direction is graph-native and explicitly attributed. Planned
+entries distinguish observations, assumptions, hypotheses, concerns,
+constraints, questions, decisions, and suggestions; relationships such as
+`supports`, `contradicts`, `refines`, and `derived-from` retain their evidence
+instead of collapsing into a confidence score. This work remains roadmap scope:
+the shipped `0.1.0-preview.3` contract is the revisioned SQLite/FTS5 store and
+immutable snapshot model documented above.
+
 ## Benchmarks
 
 The BenchmarkDotNet suite covers lexical and layered-scope retrieval at 10k and
@@ -229,4 +241,6 @@ dotnet run --project benchmarks/Penghou.Cangjie.Benchmarks -c Release -- --filte
 
 ## License
 
-MIT
+Apache-2.0
+
+Copyright (c) 2026 Jenő Konrád László
