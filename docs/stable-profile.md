@@ -25,7 +25,12 @@ SQLite validates writes before opening their transaction. Limits are fixed:
 | Legacy complete history/relation reads | 1,000 results; overflow throws InvalidOperationException, never partial truncation |
 
 Oversize inputs throw `ArgumentOutOfRangeException`; null/invalid inputs throw
-the existing argument exceptions. No partial writes are committed. Existing
+the existing argument exceptions. No partial writes are committed. Empty optional producer/source versions, source
+kind/hash and purpose are accepted and distinct from null. Item metadata and
+provenance attribute keys may be empty; snapshot metadata keys must be nonblank.
+Required scope/content/kind/producer and any supplied logical/idempotency keys
+must be nonblank. These preserve preview behavior rather than introducing a new
+vocabulary or stricter semantics. Existing
 preview data remains readable subject to bounded collection operations; existing
 larger items are not reinterpreted or deleted. New oversize writes/retries fail.
 The whole database and append-only retained history have no automatic size cap:

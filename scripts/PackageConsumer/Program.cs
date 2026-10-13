@@ -3,9 +3,37 @@ using Penghou.Cangjie;
 using Penghou.Cangjie.Sqlite;
 using Penghou.Cangjie.Testing;
 using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text.Json;
+
+var expectedHashes = JsonSerializer.Deserialize<Dictionary<string, string>>(Environment.GetEnvironmentVariable("CANGJIE_QUALIFICATION_HASHES") ?? "{}");
+foreach (var assembly in new[] { typeof(IContextStore).Assembly, typeof(SqliteContextStore).Assembly, typeof(ContextStoreConformanceSuite).Assembly })
+{
+    if (expectedHashes!.TryGetValue(Path.GetFileName(assembly.Location), out var expected) &&
+        Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(assembly.Location))) != expected)
+        throw new Exception("Runtime loaded an unexpected package payload: " + assembly.Location);
+}
 
 var path = args.Length > 1 ? args[1] : Path.Combine(Path.GetTempPath(), $"cangjie-package-{Guid.NewGuid():N}.db");
 var store = new SqliteContextStore(new CangjieSqliteOptions { DatabasePath = path, Pooling = false });
+var retainedSnapshotId = Guid.Parse("91b8460d-33a8-4b98-8916-f4979e906548");
+if (args.FirstOrDefault() == "seed")
+{
+    var first = await store.StoreAsync(Item("preview-persisted") with { Key = "retained" });
+    var second = await store.StoreAsync(Item("preview-revision-two") with { Key = "retained" });
+    await store.StoreSnapshotAsync(new ContextSnapshot { Id = retainedSnapshotId, ItemIds = [first.Id, second.Id], QueryIdentity = "preview-retained", Strategy = "exact", StrategyVersion = "1", Metadata = new Dictionary<string, string> { ["baseline"] = "schema4" } });
+    File.WriteAllText(path + ".ids.json", JsonSerializer.Serialize(new[] { first.Id, second.Id }));
+    Console.WriteLine("Baseline-created schema4 snapshot retained.");
+    return;
+}
+if (args.FirstOrDefault() == "read-seed")
+{
+    var expectedIds = JsonSerializer.Deserialize<Guid[]>(File.ReadAllText(path + ".ids.json"))!;
+    var resolution = await store.ResolveSnapshotAsync(retainedSnapshotId) ?? throw new Exception("Baseline-created snapshot was lost.");
+    if (!resolution.Items.Select(item => item.Id).SequenceEqual(expectedIds) || resolution.Items[0].Content != "preview-persisted" || resolution.Items[1].Revision != 2 || resolution.Snapshot.Metadata["baseline"] != "schema4") throw new Exception("Baseline-created schema4 semantics changed.");
+    Console.WriteLine("SUPPORTED BY THIS PROBE: unchanged baseline-created schema4 pinned snapshot reopened.");
+    return;
+}
 if (args.FirstOrDefault() == "append-child")
 {
     for (var index = 0; index < 10; index++) await store.StoreAsync(Item("process-append") with { Key = "multi-process" });

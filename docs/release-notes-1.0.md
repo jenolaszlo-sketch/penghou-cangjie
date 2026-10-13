@@ -23,11 +23,16 @@ not deletion/recreation of valuable application context.
 Exact-package qualification uses `scripts/qualify-packages.ps1`: isolated package
 restore, conformance, child-process termination with an uncommitted SQLite
 transaction, committed pinned snapshot reopen, unchanged compiled preview consumer
-with only package DLL replacement, and unchanged Solo/Zhinu cross-store restart
+with only package DLL replacement (baseline is executed before replacement),
+retained baseline-created schema-4 snapshot reopened by the candidate, and unchanged
+Solo/Zhinu cross-store restart
 test. JSON evidence records source/version/OS/date/binary SHA. The release workflow
 qualifies exact artifacts on Linux and Windows and publishes those same Ubuntu
-artifacts; SHA256 manifests/artifacts remain attached to the workflow run. Public
-restore repeats qualification using a new packages directory. No claim extends
+artifacts; SHA256 manifests/artifacts remain attached to the workflow run. Local qualification maps all Cangjie packages exclusively to the artifact feed
+and asserts project-free exact versions and ZIP-entry SHA256 payloads. Public
+restore repeats qualification using a new packages directory and compares every
+ZIP entry to the reviewed package, excluding only the NuGet signature entry.
+Runtime probes assert loaded Cangjie assembly hashes. No claim extends
 to unexecuted consumers, macOS, power-loss hardware or unrelated Zhinu semantics.
 
 Stable gate: both platform tests and exact artifacts pass, public RC restores and

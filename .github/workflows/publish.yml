@@ -72,8 +72,13 @@ jobs:
         uses: NuGet/login@v1
         with:
           user: ${{ secrets.NUGET_USER }}
+      - name: Verify source and artifact hashes before publication
+        shell: bash
+        run: |
+          test "$(cat artifacts/source-commit.txt)" = "$GITHUB_SHA"
+          sha256sum -c artifacts/SHA256SUMS
       - name: Publish exact qualified artifacts
-        run: dotnet nuget push './artifacts/*.nupkg' --source https://api.nuget.org/v3/index.json --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
+        run: dotnet nuget push './artifacts/*.nupkg' --source https://api.nuget.org/v3/index.json --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate --no-symbols
       - name: Publish symbols
         run: dotnet nuget push './artifacts/*.snupkg' --source https://api.nuget.org/v3/index.json --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
       - name: Clean public package qualification
@@ -82,7 +87,7 @@ jobs:
           $success = $false
           for ($attempt = 0; $attempt -lt 12; $attempt++) {
             try {
-              ./scripts/qualify-packages.ps1 -Version (Get-Content artifacts/version.txt)
+              ./scripts/qualify-packages.ps1 -Version (Get-Content artifacts/version.txt) -ReferencePackageDirectory artifacts
               $success = $true
               break
             } catch { if ($attempt -eq 11) { throw }; Start-Sleep -Seconds 30 }
