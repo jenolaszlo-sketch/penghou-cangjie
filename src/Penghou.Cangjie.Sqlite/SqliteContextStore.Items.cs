@@ -45,6 +45,9 @@ public sealed partial class SqliteContextStore
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(requests);
+        requests = requests.ToArray();
+        if (requests.Count > StoreBounds.Batch)
+            throw new ArgumentOutOfRangeException(nameof(requests), "At most 100 requests are allowed.");
         if (requests.Count == 0)
             throw new ArgumentException("A context write batch must not be empty.", nameof(requests));
         foreach (var request in requests)
@@ -164,6 +167,9 @@ public sealed partial class SqliteContextStore
                 $"Expected revision {expectedRevision} for '{item.Scope}/{item.Key}', but current revision is {actualRevision}.");
         }
 
+        if (actualRevision == int.MaxValue)
+            throw new ContextStoreConflictException("The logical revision counter is exhausted.");
+
         var normalized = canonicalRequest with
         {
             Id = id,
@@ -230,6 +236,8 @@ public sealed partial class SqliteContextStore
         string key,
         CancellationToken cancellationToken = default)
     {
+        StoreBounds.Text(scope, nameof(scope));
+        StoreBounds.Text(key, nameof(key));
         ArgumentException.ThrowIfNullOrWhiteSpace(scope);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
@@ -248,6 +256,8 @@ public sealed partial class SqliteContextStore
         string key,
         CancellationToken cancellationToken = default)
     {
+        StoreBounds.Text(scope, nameof(scope));
+        StoreBounds.Text(key, nameof(key));
         ArgumentException.ThrowIfNullOrWhiteSpace(scope);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
@@ -533,6 +543,8 @@ public sealed partial class SqliteContextStore
         int? limit,
         CancellationToken cancellationToken)
     {
+        var boundedLegacyRead = limit is null;
+        limit ??= StoreBounds.Collection + 1;
         var sql = $"""
             SELECT {SelectColumns}
             FROM context_items ci
@@ -549,6 +561,8 @@ public sealed partial class SqliteContextStore
         var values = new List<ContextItem>();
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             values.Add(ReadItem(reader));
+        if (boundedLegacyRead && values.Count > StoreBounds.Collection)
+            throw new InvalidOperationException("History exceeds the 1000-result stable profile; no partial history was returned.");
         return values;
     }
 

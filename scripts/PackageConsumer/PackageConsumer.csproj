@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Penghou.Cangjie.Sqlite" Version="$(QualificationVersion)" />
+    <PackageReference Include="Penghou.Cangjie.Testing" Version="$(QualificationVersion)" />
+  </ItemGroup>
+</Project>

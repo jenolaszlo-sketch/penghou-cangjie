@@ -8,7 +8,9 @@ public sealed record ContextRelationQuery
         ContextRelationDirection.Outgoing;
 
     /// <summary>Gets optional exact relation kinds to include.</summary>
-    public IReadOnlyCollection<string>? Kinds { get; init; }
+    public IReadOnlyCollection<string>? Kinds { get => kinds; init => kinds = value is null ? null : OwnedCollections.Copy<string>(value); }
+
+    private IReadOnlyCollection<string>? kinds;
 
     /// <summary>Gets the maximum result count, from 1 through 100.</summary>
     public int Limit { get; init; } = 100;

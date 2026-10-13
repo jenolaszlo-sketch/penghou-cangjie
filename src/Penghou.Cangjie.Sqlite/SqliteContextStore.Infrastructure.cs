@@ -50,6 +50,13 @@ public sealed partial class SqliteContextStore
     private static void ValidateItem(ContextItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
+        if (Encoding.UTF8.GetByteCount(item.Content ?? string.Empty) > StoreBounds.ContentBytes)
+            throw new ArgumentOutOfRangeException(nameof(item), "Content must not exceed 1048576 UTF-8 bytes.");
+        StoreBounds.Text(item.Scope, nameof(item));
+        StoreBounds.Text(item.Key, nameof(item));
+        StoreBounds.Text(item.Kind, nameof(item));
+        StoreBounds.Metadata(item.Metadata, nameof(item));
+        StoreBounds.Strings(item.Tags, nameof(item));
         ArgumentException.ThrowIfNullOrWhiteSpace(item.Scope);
         ArgumentException.ThrowIfNullOrWhiteSpace(item.Content);
         ArgumentException.ThrowIfNullOrWhiteSpace(item.Kind);
@@ -58,6 +65,12 @@ public sealed partial class SqliteContextStore
         if (item.Key is not null && string.IsNullOrWhiteSpace(item.Key))
             throw new ArgumentException("Logical key must not be blank.", nameof(item));
         ArgumentNullException.ThrowIfNull(item.Provenance);
+        StoreBounds.Text(item.Provenance.Producer, nameof(item));
+        StoreBounds.Text(item.Provenance.ProducerVersion, nameof(item));
+        StoreBounds.Text(item.Provenance.Source?.Uri, nameof(item));
+        StoreBounds.Text(item.Provenance.Source?.Kind, nameof(item));
+        StoreBounds.Text(item.Provenance.Source?.ContentHash, nameof(item));
+        StoreBounds.Metadata(item.Provenance.Attributes, nameof(item));
         ArgumentException.ThrowIfNullOrWhiteSpace(item.Provenance.Producer);
         if (item.Provenance.Source is not null)
             ArgumentException.ThrowIfNullOrWhiteSpace(item.Provenance.Source.Uri);
@@ -77,6 +90,13 @@ public sealed partial class SqliteContextStore
     private static void ValidateQuery(ContextQuery query)
     {
         ArgumentNullException.ThrowIfNull(query);
+        StoreBounds.Text(query.Text, nameof(query));
+        StoreBounds.Text(query.Scope, nameof(query));
+        StoreBounds.Text(query.Key, nameof(query));
+        StoreBounds.Text(query.SourceUri, nameof(query));
+        StoreBounds.Strings(query.Scopes, nameof(query));
+        StoreBounds.Strings(query.Kinds, nameof(query));
+        StoreBounds.Strings(query.Tags, nameof(query));
         if (query.Limit is <= 0 or > 100)
             throw new ArgumentOutOfRangeException(nameof(query));
         if (!Enum.IsDefined(query.SearchMode))
@@ -108,6 +128,7 @@ public sealed partial class SqliteContextStore
         ContextItem item,
         ContextWriteOptions? options)
     {
+        StoreBounds.Text(options?.IdempotencyKey, nameof(options));
         if (options?.ExpectedRevision is < 0)
             throw new ArgumentOutOfRangeException(nameof(options));
         if (options?.ExpectedRevision is not null && item.Key is null)

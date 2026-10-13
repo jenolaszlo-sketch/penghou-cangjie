@@ -11,6 +11,14 @@ without requiring an agent framework, vector database, or LLM. Immutable
 snapshots make the exact context supplied to a consumer reproducible after a
 restart.
 
+## Supported profile and compatibility
+
+The [bounded 1.0 current-store contract](docs/stable-profile.md),
+[preview migration notes](docs/release-notes-1.0.md) and
+[graduation inventory](docs/graduation-inventory.md) define the stable promise.
+This release preserves SQLite schema 4 and intentionally freezes the existing
+public API. RC remains prerelease until exact and public-package gates pass.
+
 ## Packages
 
 | Package | Purpose |
@@ -22,7 +30,7 @@ restart.
 ## Install
 
 ```bash
-dotnet add package Penghou.Cangjie.Sqlite --version 0.1.0-preview.3
+dotnet add package Penghou.Cangjie.Sqlite --version 1.0.0-rc.1
 ```
 
 ## Quick start

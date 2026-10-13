@@ -1,78 +1,94 @@
 name: Publish to NuGet
-
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Resolve exact version
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then version="${GITHUB_REF_NAME#v}"; else version="$(dotnet msbuild src/Penghou.Cangjie/Penghou.Cangjie.csproj -getProperty:PackageVersion)"; fi
+          echo "PACKAGE_VERSION=$version" >> "$GITHUB_ENV"
+          echo "$version" > version.txt
+      - run: dotnet pack Penghou.Cangjie.slnx -c Release -o artifacts -p:Version=${{ env.PACKAGE_VERSION }} -p:PackageVersion=${{ env.PACKAGE_VERSION }}
+      - name: Bind artifacts to source
+        run: |
+          git rev-parse HEAD > artifacts/source-commit.txt
+          cp version.txt artifacts/version.txt
+          sha256sum artifacts/*.nupkg artifacts/*.snupkg > artifacts/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: artifacts/
+  qualify:
+    needs: pack
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+          path: artifacts
+      - run: dotnet test Penghou.Cangjie.slnx -c Release
+      - name: Exact artifact qualification
+        shell: pwsh
+        run: ./scripts/qualify-packages.ps1 -Version (Get-Content artifacts/version.txt) -PackageDirectory artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qualification-${{ matrix.os }}
+          path: artifacts/qualification/
   publish:
+    needs: qualify
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-
-      - name: Pack
-        shell: bash
-        run: |
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            package_version="${GITHUB_REF_NAME#v}"
-          else
-            package_version="$(dotnet msbuild \
-              src/Penghou.Cangjie/Penghou.Cangjie.csproj \
-              -getProperty:PackageVersion)"
-          fi
-
-          package_ids=(
-            Penghou.Cangjie
-            Penghou.Cangjie.Sqlite
-            Penghou.Cangjie.Testing
-          )
-
-          for csproj in \
-            src/Penghou.Cangjie/Penghou.Cangjie.csproj \
-            src/Penghou.Cangjie.Sqlite/Penghou.Cangjie.Sqlite.csproj \
-            src/Penghou.Cangjie.Testing/Penghou.Cangjie.Testing.csproj; do
-            dotnet pack "$csproj" \
-              --configuration Release \
-              --output ./artifacts \
-              --property:Version="$package_version" \
-              --property:PackageVersion="$package_version"
-          done
-
-          for package_id in "${package_ids[@]}"; do
-            test -f "./artifacts/$package_id.$package_version.nupkg"
-            test -f "./artifacts/$package_id.$package_version.snupkg"
-          done
-
-      - name: NuGet login (OIDC -> temp API key)
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-packages
+          path: artifacts
+      - name: NuGet login (OIDC -> temporary API key)
         id: login
         uses: NuGet/login@v1
         with:
           user: ${{ secrets.NUGET_USER }}
-
-      - name: Push packages to NuGet
-        run: >
-          dotnet nuget push ./artifacts/*.nupkg
-          --source https://api.nuget.org/v3/index.json
-          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
-          --skip-duplicate
-
-      - name: Push symbols to NuGet
-        run: >
-          dotnet nuget push ./artifacts/*.snupkg
-          --source https://api.nuget.org/v3/index.json
-          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
-          --skip-duplicate
+      - name: Publish exact qualified artifacts
+        run: dotnet nuget push './artifacts/*.nupkg' --source https://api.nuget.org/v3/index.json --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
+      - name: Publish symbols
+        run: dotnet nuget push './artifacts/*.snupkg' --source https://api.nuget.org/v3/index.json --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
+      - name: Clean public package qualification
+        shell: pwsh
+        run: |
+          $success = $false
+          for ($attempt = 0; $attempt -lt 12; $attempt++) {
+            try {
+              ./scripts/qualify-packages.ps1 -Version (Get-Content artifacts/version.txt)
+              $success = $true
+              break
+            } catch { if ($attempt -eq 11) { throw }; Start-Sleep -Seconds 30 }
+          }
+          if (-not $success) { throw 'Public package qualification failed.' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qualification-public
+          path: artifacts/qualification/

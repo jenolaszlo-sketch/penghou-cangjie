@@ -75,6 +75,8 @@ public sealed partial class SqliteContextStore
         int? limit,
         CancellationToken cancellationToken)
     {
+        var boundedLegacyRead = limit is null;
+        limit ??= StoreBounds.Collection + 1;
         var predicate = direction switch
         {
             ContextRelationDirection.Outgoing => "(from_id = $id)",
@@ -124,6 +126,8 @@ public sealed partial class SqliteContextStore
                 CreatedAt = ParseTimestamp(reader.GetString(3))
             });
         }
+        if (boundedLegacyRead && values.Count > StoreBounds.Collection)
+            throw new InvalidOperationException("Relations exceed the 1000-result stable profile; use QueryRelationsAsync for a bounded selection.");
         return values;
     }
 
@@ -148,6 +152,7 @@ public sealed partial class SqliteContextStore
     private static void ValidateRelation(ContextRelation relation)
     {
         ArgumentNullException.ThrowIfNull(relation);
+        StoreBounds.Text(relation.Kind, nameof(relation));
         if (relation.FromId == Guid.Empty || relation.ToId == Guid.Empty)
             throw new ArgumentException("Relation IDs must not be empty.", nameof(relation));
         if (relation.FromId == relation.ToId)
@@ -158,6 +163,7 @@ public sealed partial class SqliteContextStore
     private static void ValidateRelationQuery(ContextRelationQuery query)
     {
         ArgumentNullException.ThrowIfNull(query);
+        StoreBounds.Strings(query.Kinds, nameof(query));
         if (!Enum.IsDefined(query.Direction))
             throw new ArgumentOutOfRangeException(nameof(query));
         if (query.Limit is <= 0 or > 100)

@@ -16,6 +16,7 @@ public sealed record ContextProvenance
     public DateTimeOffset? OriginatedAt { get; init; }
 
     /// <summary>Gets additional provider-neutral provenance attributes.</summary>
-    public IReadOnlyDictionary<string, string> Attributes { get; init; } =
-        new Dictionary<string, string>();
+    public IReadOnlyDictionary<string, string> Attributes { get => attributes; init => attributes = OwnedCollections.Copy(value); }
+
+    private IReadOnlyDictionary<string, string> attributes = OwnedCollections.Copy(new Dictionary<string, string>());
 }

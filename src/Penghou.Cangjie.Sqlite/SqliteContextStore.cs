@@ -34,26 +34,7 @@ public sealed partial class SqliteContextStore : IContextStore
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            await database.EnsureInitializedAsync(cancellationToken)
-                .ConfigureAwait(false);
-            await using var connection = await database.OpenAsync(cancellationToken)
-                .ConfigureAwait(false);
-            await using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA journal_mode;";
-            var journalMode = Convert.ToString(
-                await command.ExecuteScalarAsync(cancellationToken)
-                    .ConfigureAwait(false),
-                System.Globalization.CultureInfo.InvariantCulture);
-            return new ContextStoreHealth
-            {
-                IsHealthy = true,
-                StoreName = "sqlite",
-                SchemaVersion = 4,
-                WalMode = string.Equals(
-                    journalMode,
-                    "wal",
-                    StringComparison.OrdinalIgnoreCase)
-            };
+            return await database.ProbeAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -31,9 +31,12 @@ public sealed record ContextItem
     public DateTimeOffset? ExpiresAt { get; init; }
 
     /// <summary>Gets consumer-defined string metadata not included in full-text search.</summary>
-    public IReadOnlyDictionary<string, string> Metadata { get; init; } =
-        new Dictionary<string, string>();
+    public IReadOnlyDictionary<string, string> Metadata { get => metadata; init => metadata = OwnedCollections.Copy(value); }
+
+    private IReadOnlyDictionary<string, string> metadata = OwnedCollections.Copy(new Dictionary<string, string>());
 
     /// <summary>Gets normalized labels used for indexed filtering.</summary>
-    public IReadOnlyCollection<string> Tags { get; init; } = [];
+    public IReadOnlyCollection<string> Tags { get => tags; init => tags = OwnedCollections.Copy<string>(value); }
+
+    private IReadOnlyCollection<string> tags = Array.AsReadOnly(Array.Empty<string>());
 }

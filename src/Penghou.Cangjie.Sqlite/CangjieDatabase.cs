@@ -22,7 +22,13 @@ internal sealed class CangjieDatabase
         if (options.BusyTimeout < TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(options));
 
-        Options = options;
+        Options = new CangjieSqliteOptions
+        {
+            DatabasePath = options.DatabasePath,
+            EnableWal = options.EnableWal,
+            BusyTimeout = options.BusyTimeout,
+            Pooling = options.Pooling
+        };
         var path = Path.GetFullPath(options.DatabasePath);
         var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrWhiteSpace(directory))
@@ -37,6 +43,29 @@ internal sealed class CangjieDatabase
     }
 
     public CangjieSqliteOptions Options { get; }
+
+    internal async ValueTask<ContextStoreHealth> ProbeAsync(CancellationToken cancellationToken)
+    {
+        var probeString = new SqliteConnectionStringBuilder(connectionString)
+        {
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false
+        }.ToString();
+        await using var connection = new SqliteConnection(probeString);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM cangjie_schema WHERE version = 4;";
+        if (Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture) != 1)
+            throw new InvalidOperationException("The existing Cangjie schema is incompatible.");
+        command.CommandText = "SELECT COUNT(*) FROM cangjie_schema;";
+        if (Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture) != 1)
+            throw new InvalidOperationException("The existing Cangjie schema is incompatible.");
+        command.CommandText = "SELECT id FROM context_items LIMIT 1;";
+        await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        command.CommandText = "PRAGMA journal_mode;";
+        var mode = Convert.ToString(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false), CultureInfo.InvariantCulture);
+        return new ContextStoreHealth { IsHealthy = true, StoreName = "sqlite", SchemaVersion = 4, WalMode = string.Equals(mode, "wal", StringComparison.OrdinalIgnoreCase) };
+    }
 
     public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -55,7 +84,7 @@ internal sealed class CangjieDatabase
             await ExecuteAsync(connection, SchemaBootstrap, cancellationToken)
                 .ConfigureAwait(false);
             await using var versionCommand = connection.CreateCommand();
-            versionCommand.CommandText = "SELECT MAX(version) FROM cangjie_schema;";
+            versionCommand.CommandText = "SELECT CASE WHEN COUNT(*) = 1 THEN MAX(version) ELSE -1 END FROM cangjie_schema;";
             var version = Convert.ToInt32(
                 await versionCommand.ExecuteScalarAsync(cancellationToken)
                     .ConfigureAwait(false),
@@ -63,7 +92,7 @@ internal sealed class CangjieDatabase
             if (version != CurrentVersion)
             {
                 throw new InvalidOperationException(
-                    $"Cangjie database schema version {version} is not supported by this preview. Recreate the database with schema version {CurrentVersion}.");
+                    $"Cangjie database schema version {version} is not supported. No migration was performed; restore a compatible backup or explicitly migrate to schema version {CurrentVersion}.");
             }
             await ExecuteAsync(connection, Schema, cancellationToken)
                 .ConfigureAwait(false);

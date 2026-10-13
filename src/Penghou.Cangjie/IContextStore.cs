@@ -28,7 +28,7 @@ public interface IContextStore
         string key,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Gets all revisions for an exact scope and logical key, newest first.</summary>
+    /// <summary>Gets up to 1000 complete revisions for an exact scope and logical key, newest first; overflow fails without truncation.</summary>
     ValueTask<IReadOnlyList<ContextItem>> GetHistoryByKeyAsync(
         string scope,
         string key,
@@ -68,7 +68,7 @@ public interface IContextStore
         ContextRelation relation,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Gets directed relationships involving an item in the requested direction.</summary>
+    /// <summary>Gets up to 1000 complete relationships involving an item; overflow fails without truncation.</summary>
     ValueTask<IReadOnlyList<ContextRelation>> GetRelationsAsync(
         Guid id,
         ContextRelationDirection direction =

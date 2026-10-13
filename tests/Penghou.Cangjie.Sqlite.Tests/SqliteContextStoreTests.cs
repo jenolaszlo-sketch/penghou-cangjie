@@ -624,6 +624,8 @@ public sealed class SqliteContextStoreTests : IDisposable
     public async Task Health_ReportsActualWalModeAndPropagatesCancellation()
     {
         var store = CreateStore();
+        (await store.CheckHealthAsync()).IsHealthy.Should().BeFalse();
+        await store.StoreAsync(new ContextItem { Scope = "test", Kind = ContextKinds.Evidence, Content = "health bootstrap", Provenance = new ContextProvenance { Producer = "test" } });
         var health = await store.CheckHealthAsync();
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();

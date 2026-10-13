@@ -114,6 +114,8 @@ public sealed partial class SqliteContextStore
         var items = new List<ContextItem>();
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             items.Add(ReadItem(reader));
+        if (items.Count != snapshot.ItemIds.Count || !items.Select(item => item.Id).SequenceEqual(snapshot.ItemIds))
+            throw new InvalidOperationException("Snapshot references are corrupt; no partial resolution was returned.");
         return new ContextSnapshotResolution { Snapshot = snapshot, Items = items };
     }
 
@@ -151,7 +153,7 @@ public sealed partial class SqliteContextStore
         }
         await using var itemCommand = CreateCommand(connection, """
             SELECT item_id FROM context_snapshot_items
-            WHERE snapshot_id = $id ORDER BY ordinal ASC;
+            WHERE snapshot_id = $id ORDER BY ordinal ASC LIMIT 1001;
             """, [("$id", id.ToString("D"))]);
         itemCommand.Transaction = transaction;
         await using var itemReader = await itemCommand.ExecuteReaderAsync(cancellationToken)
@@ -159,6 +161,8 @@ public sealed partial class SqliteContextStore
         var itemIds = new List<Guid>();
         while (await itemReader.ReadAsync(cancellationToken).ConfigureAwait(false))
             itemIds.Add(Guid.Parse(itemReader.GetString(0)));
+        if (itemIds.Count > StoreBounds.Collection)
+            throw new InvalidOperationException("Snapshot exceeds the 1000-item stable profile; no partial snapshot was returned.");
         return new ContextSnapshot
         {
             Id = id,
@@ -192,6 +196,13 @@ public sealed partial class SqliteContextStore
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(snapshot.ItemIds);
+        if (snapshot.ItemIds.Count > StoreBounds.Collection)
+            throw new ArgumentOutOfRangeException(nameof(snapshot), "At most 1000 pinned items are allowed.");
+        StoreBounds.Text(snapshot.QueryIdentity, nameof(snapshot));
+        StoreBounds.Text(snapshot.Strategy, nameof(snapshot));
+        StoreBounds.Text(snapshot.StrategyVersion, nameof(snapshot));
+        StoreBounds.Text(snapshot.Purpose, nameof(snapshot));
+        StoreBounds.Metadata(snapshot.Metadata, nameof(snapshot));
         if (snapshot.ItemIds.Count == 0)
             throw new ArgumentException("A snapshot must reference at least one item.", nameof(snapshot));
         if (snapshot.ItemIds.Any(id => id == Guid.Empty) ||

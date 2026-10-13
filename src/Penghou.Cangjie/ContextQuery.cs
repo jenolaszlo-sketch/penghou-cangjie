@@ -13,7 +13,9 @@ public sealed record ContextQuery
     /// Gets optional exact scopes in descending precedence. Keyed logical
     /// concepts are returned once from their highest-precedence scope.
     /// </summary>
-    public IReadOnlyList<string>? Scopes { get; init; }
+    public IReadOnlyList<string>? Scopes { get => scopes; init => scopes = value is null ? null : OwnedCollections.Copy<string>(value); }
+
+    private IReadOnlyList<string>? scopes;
 
     /// <summary>Gets an optional exact logical-key filter.</summary>
     public string? Key { get; init; }
@@ -22,10 +24,14 @@ public sealed record ContextQuery
     public string? SourceUri { get; init; }
 
     /// <summary>Gets optional allowed context kinds.</summary>
-    public IReadOnlyCollection<string>? Kinds { get; init; }
+    public IReadOnlyCollection<string>? Kinds { get => kinds; init => kinds = value is null ? null : OwnedCollections.Copy<string>(value); }
+
+    private IReadOnlyCollection<string>? kinds;
 
     /// <summary>Gets tags that must all be present.</summary>
-    public IReadOnlyCollection<string>? Tags { get; init; }
+    public IReadOnlyCollection<string>? Tags { get => tags; init => tags = value is null ? null : OwnedCollections.Copy<string>(value); }
+
+    private IReadOnlyCollection<string>? tags;
 
     /// <summary>Gets the maximum result count, from 1 through 100.</summary>
     public int Limit { get; init; } = 10;
