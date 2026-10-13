@@ -17,7 +17,8 @@ The [bounded 1.0 current-store contract](docs/stable-profile.md),
 [preview migration notes](docs/release-notes-1.0.md) and
 [graduation inventory](docs/graduation-inventory.md) define the stable promise.
 This release preserves SQLite schema 4 and intentionally freezes the existing
-public API. RC remains prerelease until exact and public-package gates pass.
+public API. The [qualification evidence](docs/graduation-evidence.md) records exact artifact,
+public package and representative consumer proofs.
 
 ## Packages
 
@@ -30,7 +31,7 @@ public API. RC remains prerelease until exact and public-package gates pass.
 ## Install
 
 ```bash
-dotnet add package Penghou.Cangjie.Sqlite --version 1.0.0-rc.1
+dotnet add package Penghou.Cangjie.Sqlite --version 1.0.0
 ```
 
 ## Quick start
@@ -48,7 +49,7 @@ var evidence = await store.StoreAsync(new ContextItem
 {
     Scope = "repo:my-app",
     Kind = ContextKinds.Evidence,
-    Content = "The gateway references Yarp.ReverseProxy.",
+    Content = "The gateway references a reverse proxy through Yarp.ReverseProxy.",
     Provenance = new ContextProvenance
     {
         Producer = "solo:research",

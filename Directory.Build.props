@@ -4,15 +4,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Copyright>Copyright (c) 2026 Jenő Konrád László</Copyright>
-    <Version>1.0.0-rc.1</Version>
+    <Version>1.0.0</Version>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
-    <EnablePackageValidation Condition="'$(IsPackable)' == 'true'">true</EnablePackageValidation>
-    <PublicApiAnalyzerEnabled Condition="'$(IsPackable)' == 'true'">true</PublicApiAnalyzerEnabled>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>1.0.0-rc.1</PackageValidationBaselineVersion>
+    <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
+    <PublicApiAnalyzerEnabled>true</PublicApiAnalyzerEnabled>
   </PropertyGroup>
   <ItemGroup Condition="'$(IsPackable)' == 'true'">
     <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
   </ItemGroup>
 </Project>
+

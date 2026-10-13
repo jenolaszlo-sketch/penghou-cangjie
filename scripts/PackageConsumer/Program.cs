@@ -7,6 +7,11 @@ using System.Security.Cryptography;
 using System.Text.Json;
 
 var expectedHashes = JsonSerializer.Deserialize<Dictionary<string, string>>(Environment.GetEnvironmentVariable("CANGJIE_QUALIFICATION_HASHES") ?? "{}");
+if (args.FirstOrDefault() == "runtime")
+{
+    Console.WriteLine(System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription);
+    return;
+}
 foreach (var assembly in new[] { typeof(IContextStore).Assembly, typeof(SqliteContextStore).Assembly, typeof(ContextStoreConformanceSuite).Assembly })
 {
     if (expectedHashes!.TryGetValue(Path.GetFileName(assembly.Location), out var expected) &&

@@ -1,7 +1,7 @@
 name: Publish to NuGet
 on:
   push:
-    tags: ['v*']
+    tags: ['v*-rc.*']
   workflow_dispatch:
 permissions:
   contents: read
@@ -85,12 +85,17 @@ jobs:
         shell: pwsh
         run: |
           $success = $false
-          for ($attempt = 0; $attempt -lt 12; $attempt++) {
+          for ($attempt = 0; $attempt -lt 120; $attempt++) {
             try {
               ./scripts/qualify-packages.ps1 -Version (Get-Content artifacts/version.txt) -ReferencePackageDirectory artifacts
               $success = $true
               break
-            } catch { if ($attempt -eq 11) { throw }; Start-Sleep -Seconds 30 }
+            } catch {
+              if ($_.Exception.Message -notlike 'dotnet failed: restore*') { throw }
+              Write-Warning 'Public packages are not yet restorable; artifact/payload mismatches are never retried.'
+              if ($attempt -eq 119) { throw }
+              Start-Sleep -Seconds 30
+            }
           }
           if (-not $success) { throw 'Public package qualification failed.' }
       - uses: actions/upload-artifact@v4

@@ -39,3 +39,11 @@ Stable gate: both platform tests and exact artifacts pass, public RC restores an
 passes the probe, shipped API policy/docs complete, representative consumer path
 passes, and no inventory must-resolve item remains. Stable packages repeat public
 qualification and are tagged at the source release commit.
+
+Release operation: RC tags trigger trusted publication; stable releases use a
+manual workflow dispatch from the intended clean main commit. Only after exact
+and public qualification is complete, create the stable tag pointing to that
+same source commit. Stable tags are provenance-only and cannot repack/re-publish
+another artifact. Public restore unavailability is retried for up to 60 minutes;
+payload/version/behavior mismatches fail immediately. Do not dispatch an already
+published stable version from a later documentation commit.

@@ -97,9 +97,14 @@ foreach ($id in @('Penghou.Cangjie', 'Penghou.Cangjie.Sqlite')) {
     }
 }
 Invoke-Dotnet test (Join-Path $integration 'CrossStore.csproj') -c Release --no-restore
+$qualifiedRuntime = & dotnet (Join-Path $candidateBin 'PackageConsumer.dll') runtime
+if ($LASTEXITCODE -ne 0) { throw 'Qualified consumer runtime query failed.' }
 $record = [ordered]@{
     version = $Version; dateUtc = [DateTime]::UtcNow.ToString('O'); os = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
-    runtime = (& dotnet --version); sourceCommit = (& git -C $repo rev-parse HEAD)
+    repository = 'https://github.com/jenolaszlo-sketch/penghou-cangjie'
+    sourceRef = if ($env:GITHUB_REF) { $env:GITHUB_REF } else { (& git -C $repo branch --show-current) }
+    sdk = (& dotnet --version); runtime = $qualifiedRuntime; targetFramework = 'net10.0'
+    sourceCommit = (& git -C $repo rev-parse HEAD)
     source = if ($PackageDirectory) { 'mapped exact local artifacts' } else { 'clean public NuGet restore' }
     payloadComparison = if ($ReferencePackageDirectory) { 'all ZIP entry names and SHA256 payloads identical; only .signature.p7s excluded' } else { 'reference not supplied; public restore alone' }
     packageArtifactHashes = @(Get-ChildItem (Join-Path $workspace 'packages-candidate') -Recurse -Filter '*.nupkg' | Where-Object { $_.Name -like 'penghou.cangjie*' } | ForEach-Object { @{ name = $_.Name; sha256 = (Get-FileHash $_.FullName -Algorithm SHA256).Hash } })
