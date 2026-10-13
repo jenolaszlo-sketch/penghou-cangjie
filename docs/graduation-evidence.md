@@ -70,3 +70,22 @@ stable artifact; final stable run/tag and public validation belong in the handof
 faulty disks/network filesystems, external SQL tampering.
 `OUT OF SCOPE`: cursor paging, new engines, automatic migrations, retention policy,
 replication, distributed atomicity and unrelated preview runtimes.
+
+## Final stable result
+
+`SUPPORTED BY THIS PROBE`: all three `1.0.0` packages are published and restored
+publicly. [Stable trusted run38484745880](https://github.com/jenolaszlo-sketch/penghou-cangjie/actions/runs/38484745880)
+and main CI38484743419 passed. Exact source and provenance-only `v1.0.0` tag:
+`3af06c58e2b283d8286e53e85c663144a39bab51`.
+
+[Retained qualification files](qualification/1.0.0/) contain original artifact
+SHA256SUMS, exact/public Linux and Windows evidence, public-RC1 binary baseline,
+retained schema-4 snapshot proof and eight final public-package Guyabano tests.
+Public ZIP payloads matched the original qualified stable artifacts, excluding
+only NuGet's signature entry. Linux used SDK10.0.402 / .NET10.0.13; independent
+Windows used SDK10.0.401 / .NET10.0.12. Release source remains separate from this
+later evidence-only commit. No product source or API changed after qualification.
+
+Remaining graduation blockers: none. Deliberate exclusions above remain future
+work and do not require a new feature cycle. Stable tags cannot trigger another
+publication. Stop graduation work on this component.

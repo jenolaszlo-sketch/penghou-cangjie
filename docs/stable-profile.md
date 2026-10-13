@@ -94,7 +94,10 @@ a safe backup. Retain database, WAL and shared-memory files as appropriate durin
 recovery. Restore backup or explicitly migrate incompatible data outside this API.
 
 Local filesystem SQLite with bundled FTS5, default WAL and foreign keys is the
-supported configuration. Options are captured at construction. Multi-instance
+supported configuration. Options are captured at construction. `EnableWal=true` requests WAL during
+initialization; `false` leaves the file's existing journal mode unchanged (a new
+file therefore uses SQLite's default DELETE mode). It does not switch an already
+WAL-enabled database back to DELETE. `CheckHealthAsync` reports the actual mode. Multi-instance
 and multi-process writers are serialized by SQLite; busy timeout may expire.
 Completed transactions survive process restart/termination under SQLite's normal
 local durability guarantees. No guarantee covers faulty disks, network filesystems,

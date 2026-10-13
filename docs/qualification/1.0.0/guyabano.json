@@ -1,0 +1,25 @@
+{
+  "repository": "https://github.com/jenolaszlo-sketch/Guyabano",
+  "sourceCommit": "df845087a663b51929c081f7e83b9852598bc995",
+  "sourceRef": "codex/graduation-cangjie-consumer",
+  "qualificationDateUtc": "2026-10-13T23:43:25.222667+00:00",
+  "packageVersion": "1.0.0",
+  "packageSource": "clean public NuGet only; separate stable-public-packages directory",
+  "consumerChanges": "Four package-reference versions only; test and product implementation source unchanged",
+  "testFilters": {
+    "FullyQualifiedName~CangjieRevisionedConceptTests": 5,
+    "FullyQualifiedName~ContextIndexingArtifactRepositoryTests": 3
+  },
+  "result": "SUPPORTED BY THIS PROBE",
+  "payloadComparison": "All ZIP entries match exact trusted release artifacts; only .signature.p7s excluded",
+  "signedNupkgSha256": {
+    "Penghou.Cangjie": "1b1fd3bbabdfa42f17bd29b5ae40b2237af3b672fd53273179d76b8e9389d4ed",
+    "Penghou.Cangjie.Sqlite": "71798adeb0774f165b2996794b6a0813ddab3fa55ccee1bf9a413d358e56728e"
+  },
+  "commands": [
+    "dotnet restore tests/Guyabano.WorkflowProgress.Tests/Guyabano.WorkflowProgress.Tests.csproj --configfile NuGet.Config --packages artifacts/stable-public-packages --no-cache",
+    "dotnet test tests/Guyabano.WorkflowProgress.Tests/Guyabano.WorkflowProgress.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~CangjieRevisionedConceptTests",
+    "dotnet restore tests/Guyabano.Artifacts.Tests/Guyabano.Artifacts.Tests.csproj --configfile NuGet.Config --packages artifacts/stable-public-packages --no-cache",
+    "dotnet test tests/Guyabano.Artifacts.Tests/Guyabano.Artifacts.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~ContextIndexingArtifactRepositoryTests"
+  ]
+}

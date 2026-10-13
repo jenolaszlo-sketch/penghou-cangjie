@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "dateUtc": "2026-10-13T23:33:57.2185635Z",
+  "os": "Microsoft Windows 10.0.26100",
+  "repository": "https://github.com/jenolaszlo-sketch/penghou-cangjie",
+  "sourceRef": "refs/heads/main",
+  "sdk": "10.0.402",
+  "runtime": ".NET 10.0.13",
+  "targetFramework": "net10.0",
+  "sourceCommit": "3af06c58e2b283d8286e53e85c663144a39bab51",
+  "source": "mapped exact local artifacts",
+  "payloadComparison": "all ZIP entry names and SHA256 payloads identical; only .signature.p7s excluded",
+  "packageArtifactHashes": [
+    {
+      "name": "penghou.cangjie.1.0.0.nupkg",
+      "sha256": "73DD89A11A143A8930DE4636499834960416C4FC3785F96887AF271715588997"
+    },
+    {
+      "name": "penghou.cangjie.sqlite.1.0.0.nupkg",
+      "sha256": "DA8348F97E9D868EC57F7BB669FE00582F657293AB608980EDFC13D3539E7C03"
+    },
+    {
+      "name": "penghou.cangjie.testing.1.0.0.nupkg",
+      "sha256": "ACF331E84DB7C893D3CC5238A407F9C9E04967453BF9998C40ABFC139DFA1EC6"
+    }
+  ],
+  "packageAssemblyHashes": [
+    {
+      "name": "Penghou.Cangjie.dll",
+      "sha256": "C21137A272352FCBAD50A9FB80A8110B0D7FAAAAC9A5243151F0BF4B73AE2EB7"
+    },
+    {
+      "name": "Penghou.Cangjie.Sqlite.dll",
+      "sha256": "32983244C918E53BEC0588270DD27FD44AFF31A488D654332FE1A375D8D129EF"
+    },
+    {
+      "name": "Penghou.Cangjie.Testing.dll",
+      "sha256": "C663579D58303EBBF240F6DB73F03D94BD1376011D85778C8E4618BE6E752EA7"
+    }
+  ],
+  "binaryBaselineVersion": "1.0.0-rc.1",
+  "unchangedConsumerSha256": "D0A089E345C158BF9A6B02495DF1BC3746744BD0DAB9AAB3DDB460FA6E90D383",
+  "retainedBaselineSnapshot": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\cangjie-qualification-7ed5ec6c80cb4177878954cd2d657bae\\retained-schema4.db",
+  "result": "SUPPORTED BY THIS PROBE: exact/project-free graph and package payloads; baseline execution; retained baseline schema4 snapshot; runtime assembly hashes; conformance; multi-process revisions; process restart/kill rollback; bounds/snapshot integrity; unchanged compiled consumer; packaged Solo/Zhinu restart (public Zhinu 0.1.0-preview.14)"
+}

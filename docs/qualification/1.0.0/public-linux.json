@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "dateUtc": "2026-10-13T23:38:53.1311573Z",
+  "os": "Ubuntu 24.04.5 LTS",
+  "repository": "https://github.com/jenolaszlo-sketch/penghou-cangjie",
+  "sourceRef": "refs/heads/main",
+  "sdk": "10.0.402",
+  "runtime": ".NET 10.0.13",
+  "targetFramework": "net10.0",
+  "sourceCommit": "3af06c58e2b283d8286e53e85c663144a39bab51",
+  "source": "clean public NuGet restore",
+  "payloadComparison": "all ZIP entry names and SHA256 payloads identical; only .signature.p7s excluded",
+  "packageArtifactHashes": [
+    {
+      "name": "penghou.cangjie.sqlite.1.0.0.nupkg",
+      "sha256": "71798ADEB0774F165B2996794B6A0813DDAB3FA55CCEE1BF9A413D358E56728E"
+    },
+    {
+      "name": "penghou.cangjie.testing.1.0.0.nupkg",
+      "sha256": "6181111A332A53734C87B2BBD36157ED581D2DFD9CF3A9AACC3D5FD99A42035E"
+    },
+    {
+      "name": "penghou.cangjie.1.0.0.nupkg",
+      "sha256": "1B1FD3BBABDFA42F17BD29B5AE40B2237AF3B672FD53273179D76B8E9389D4ED"
+    }
+  ],
+  "packageAssemblyHashes": [
+    {
+      "name": "Penghou.Cangjie.dll",
+      "sha256": "C21137A272352FCBAD50A9FB80A8110B0D7FAAAAC9A5243151F0BF4B73AE2EB7"
+    },
+    {
+      "name": "Penghou.Cangjie.Sqlite.dll",
+      "sha256": "32983244C918E53BEC0588270DD27FD44AFF31A488D654332FE1A375D8D129EF"
+    },
+    {
+      "name": "Penghou.Cangjie.Testing.dll",
+      "sha256": "C663579D58303EBBF240F6DB73F03D94BD1376011D85778C8E4618BE6E752EA7"
+    }
+  ],
+  "binaryBaselineVersion": "1.0.0-rc.1",
+  "unchangedConsumerSha256": "AB0D3206355AEA37CAEF7EF925274F295F5B49F275D766749E29BD8E4A1A2586",
+  "retainedBaselineSnapshot": "/tmp/cangjie-qualification-2a3d7f080abc4c25b0d0d61111be0d52/retained-schema4.db",
+  "result": "SUPPORTED BY THIS PROBE: exact/project-free graph and package payloads; baseline execution; retained baseline schema4 snapshot; runtime assembly hashes; conformance; multi-process revisions; process restart/kill rollback; bounds/snapshot integrity; unchanged compiled consumer; packaged Solo/Zhinu restart (public Zhinu 0.1.0-preview.14)"
+}
